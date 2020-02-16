@@ -1,0 +1,3 @@
+rootProject.name='DownloadXDemo'
+include ':app'
+include ':downloadx'

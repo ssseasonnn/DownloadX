@@ -32,10 +32,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
                 val channel2 = download(url)
 
                 for (progress in channel2) {
-                    progress.downloadSize.log("Main ")
                     textView.text = progress.percentStr()
                 }
-                channel2.broadcast()
             }
 
         }

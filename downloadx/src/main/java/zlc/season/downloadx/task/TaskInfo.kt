@@ -1,5 +1,6 @@
 package zlc.season.downloadx.task
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -24,6 +25,7 @@ class TaskInfo(
     val request: Request,
     val watcher: Watcher
 ) {
+    @UseExperimental(ExperimentalCoroutinesApi::class)
     suspend fun ProducerScope<Progress>.start() {
         val response = request.get(task.url, header)
         check(response.isSuccessful) { "Request failed!" }

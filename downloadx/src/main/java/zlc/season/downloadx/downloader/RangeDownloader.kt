@@ -6,6 +6,7 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import okhttp3.ResponseBody
 import retrofit2.Response
+import zlc.season.downloadx.DOWNLOAD_IO
 import zlc.season.downloadx.Progress
 import zlc.season.downloadx.downloader.Range.Companion.RANGE_SIZE
 import zlc.season.downloadx.task.TaskInfo
@@ -30,7 +31,7 @@ class RangeDownloader : Downloader {
         tmpFile = file.tmp()
 
         beforeDownload(taskInfo, response)
-        send(Progress(response.contentLength(), response.contentLength()))
+
         if (alreadyDownloaded) {
             send(Progress(response.contentLength(), response.contentLength()))
         } else {
@@ -75,7 +76,7 @@ class RangeDownloader : Downloader {
         }
     }
 
-    private suspend fun ProducerScope<Progress>.startDownload(
+    private fun ProducerScope<Progress>.startDownload(
         taskInfo: TaskInfo,
         response: Response<ResponseBody>
     ) {
@@ -95,7 +96,8 @@ class RangeDownloader : Downloader {
 
         rangeTmpFile.undoneRanges()
             .forEach {
-                InnerDownloader(taskInfo, it, sendChannel).download()
+                val innerDownloader = InnerDownloader(taskInfo, it, sendChannel)
+                with(innerDownloader) { start() }
             }
     }
 
@@ -106,37 +108,34 @@ class RangeDownloader : Downloader {
         private val channel: SendChannel<RangeMsg>
     ) {
 
-        suspend fun download() = coroutineScope {
-            launch(Dispatchers.IO) {
-                val url = taskInfo.task.url
-                val request = taskInfo.request
-                val rangeHeader = mapOf("Range" to "bytes=${range.current}-${range.end}")
-                val response = request.get(url, rangeHeader)
+        fun CoroutineScope.start() = launch(DOWNLOAD_IO) {
+            val url = taskInfo.task.url
+            val request = taskInfo.request
+            val rangeHeader = mapOf("Range" to "bytes=${range.current}-${range.end}")
+            val response = request.get(url, rangeHeader)
 
-                val body = response.body() ?: throw RuntimeException("Response body is NULL")
+            val body = response.body() ?: throw RuntimeException("Response body is NULL")
 
-                val source = body.byteStream()
+            val source = body.byteStream()
 
-                val tmpFileBuffer = tmpFile.mappedByteBuffer(range.startByte(), RANGE_SIZE)
-                val shadowFileBuffer =
-                    shadowFile.mappedByteBuffer(range.current, range.remainSize())
+            val tmpFileBuffer = tmpFile.mappedByteBuffer(range.startByte(), RANGE_SIZE)
+            val shadowFileBuffer =
+                shadowFile.mappedByteBuffer(range.current, range.remainSize())
 
-                val buffer = ByteArray(8192)
-                var readLen = source.read(buffer)
+            val buffer = ByteArray(8192)
+            var readLen = source.read(buffer)
 
-                while (readLen != -1) {
-                    shadowFileBuffer.put(buffer, 0, readLen)
-                    range.current += readLen
+            while (readLen != -1) {
+                shadowFileBuffer.put(buffer, 0, readLen)
+                range.current += readLen
 
-                    tmpFileBuffer.putLong(16, range.current)
+                tmpFileBuffer.putLong(16, range.current)
 
-                    channel.send(RangeMsg(readLen))
-                    readLen.log("InnerDownloader send")
+                channel.send(RangeMsg(readLen))
 
-                    readLen = source.read(buffer)
-                }
-                source.closeQuietly()
+                readLen = source.read(buffer)
             }
+            source.closeQuietly()
         }
     }
 }

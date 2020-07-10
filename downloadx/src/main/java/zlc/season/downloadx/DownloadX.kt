@@ -34,6 +34,7 @@ const val DEFAULT_MAX_CONCURRENCY = 3
 
 fun CoroutineScope.download(url: String): ReceiveChannel<Progress> {
     return produce {
+        "produce ${Thread.currentThread().name}".log()
         download(url)
     }
 }

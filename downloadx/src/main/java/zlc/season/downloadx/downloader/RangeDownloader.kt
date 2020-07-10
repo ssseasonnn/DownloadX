@@ -82,8 +82,9 @@ class RangeDownloader : Downloader {
     ) {
         val progress = rangeTmpFile.lastProgress()
 
-        val sendChannel = actor<RangeMsg> {
+        val sendChannel = actor<RangeMsg>(DOWNLOAD_IO) {
             for (msg in channel) {
+                "actor ${Thread.currentThread().name}".log()
                 progress.apply { this.downloadSize += msg.readLen }
                 send(progress)
             }
@@ -112,6 +113,8 @@ class RangeDownloader : Downloader {
             val url = taskInfo.task.url
             val request = taskInfo.request
             val rangeHeader = mapOf("Range" to "bytes=${range.current}-${range.end}")
+
+            "Range ${range.current}-${range.end} ${Thread.currentThread().name}".log()
             val response = request.get(url, rangeHeader)
 
             val body = response.body() ?: throw RuntimeException("Response body is NULL")

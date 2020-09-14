@@ -1,9 +1,9 @@
 package zlc.season.downloadx.watcher
 
-import zlc.season.downloadx.task.Task
+import zlc.season.downloadx.task.DownloadParams
 
 interface Watcher {
-    fun watch(task: Task)
+    fun watch(downloadParams: DownloadParams)
 
-    fun unwatch(task: Task)
+    fun unwatch(downloadParams: DownloadParams)
 }

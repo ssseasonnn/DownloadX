@@ -1,15 +1,10 @@
 package zlc.season.downloadx.task
 
-import zlc.season.downloadx.DEFAULT_SAVE_PATH
-import zlc.season.downloadx.utils.getFileNameFromUrl
 
-open class Task(
+open class DownloadParams(
     var url: String,
-    var taskName: String = getFileNameFromUrl(url),
     var saveName: String = "",
-    var savePath: String = DEFAULT_SAVE_PATH,
-
-    var extraInfo: String = ""
+    var savePath: String = "",
 ) {
 
     /**
@@ -22,7 +17,7 @@ open class Task(
         if (other == null) return false
         if (this === other) return true
 
-        return if (other is Task) {
+        return if (other is DownloadParams) {
             tag() == other.tag()
         } else {
             false
@@ -31,9 +26,5 @@ open class Task(
 
     override fun hashCode(): Int {
         return tag().hashCode()
-    }
-
-    open fun isEmpty(): Boolean {
-        return taskName.isEmpty() || saveName.isEmpty() || savePath.isEmpty()
     }
 }

@@ -1,134 +1,159 @@
 package zlc.season.downloadx.downloader
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
+import kotlinx.coroutines.channels.consumeEach
 import okhttp3.ResponseBody
 import retrofit2.Response
-import zlc.season.downloadx.DOWNLOAD_IO
-import zlc.season.downloadx.Progress
+import zlc.season.downloadx.core.request
 import zlc.season.downloadx.downloader.Range.Companion.RANGE_SIZE
-import zlc.season.downloadx.task.TaskInfo
+import zlc.season.downloadx.task.DownloadConfig
+import zlc.season.downloadx.task.DownloadParams
 import zlc.season.downloadx.utils.*
 import java.io.File
 
-@UseExperimental(ExperimentalCoroutinesApi::class, ObsoleteCoroutinesApi::class)
-class RangeDownloader : Downloader {
-    private var alreadyDownloaded = false
-
+@ObsoleteCoroutinesApi
+class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutineScope) {
     private lateinit var file: File
     private lateinit var shadowFile: File
     private lateinit var tmpFile: File
     private lateinit var rangeTmpFile: RangeTmpFile
 
-    override suspend fun ProducerScope<Progress>.download(
-        taskInfo: TaskInfo,
+    override suspend fun download(
+        downloadParams: DownloadParams,
+        downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     ) {
-        file = taskInfo.task.getFile()
+        file = downloadParams.file()
         shadowFile = file.shadow()
         tmpFile = file.tmp()
 
-        beforeDownload(taskInfo, response)
+        val alreadyDownloaded = checkFiles(downloadParams, downloadConfig, response)
 
         if (alreadyDownloaded) {
-            send(Progress(response.contentLength(), response.contentLength()))
+            downloadSize = response.contentLength()
+            totalSize = response.contentLength()
         } else {
-            startDownload(taskInfo, response)
+            totalSize = response.contentLength()
+            startDownload(downloadParams, downloadConfig, response)
         }
     }
 
-    private fun beforeDownload(taskInfo: TaskInfo, response: Response<ResponseBody>) {
+    private fun checkFiles(
+        downloadParams: DownloadParams,
+        downloadConfig: DownloadConfig,
+        response: Response<ResponseBody>
+    ): Boolean {
+        var alreadyDownloaded = false
+
         //make sure dir is exists
-        val fileDir = taskInfo.task.getDir()
+        val fileDir = downloadParams.dir()
         if (!fileDir.exists() || !fileDir.isDirectory) {
             fileDir.mkdirs()
         }
 
+        val contentLength = response.contentLength()
+        val rangeSize = downloadConfig.rangeSize
+        val totalRanges = response.calcRanges(rangeSize)
+
         if (file.exists()) {
-            if (taskInfo.validator.validate(file, response)) {
+            if (file.length() == contentLength) {
                 alreadyDownloaded = true
             } else {
                 file.delete()
-                createFiles(response, taskInfo)
+                recreateFiles(contentLength, totalRanges, rangeSize)
             }
         } else {
             if (shadowFile.exists() && tmpFile.exists()) {
-
                 rangeTmpFile = RangeTmpFile(tmpFile)
+                rangeTmpFile.read()
 
-                if (!rangeTmpFile.read(response, taskInfo)) {
-                    createFiles(response, taskInfo)
+                if (!rangeTmpFile.isValid(contentLength, totalRanges)) {
+                    recreateFiles(contentLength, totalRanges, rangeSize)
                 }
             } else {
-                createFiles(response, taskInfo)
+                recreateFiles(contentLength, totalRanges, rangeSize)
             }
         }
+
+        return alreadyDownloaded
     }
 
-    private fun createFiles(response: Response<ResponseBody>, taskInfo: TaskInfo) {
-        tmpFile.recreate {
-            shadowFile.recreate(response.contentLength()) {
-                rangeTmpFile = RangeTmpFile(tmpFile)
-                rangeTmpFile.write(response, taskInfo)
-            }
-        }
+    private fun recreateFiles(contentLength: Long, totalRanges: Long, rangeSize: Long) {
+        tmpFile.recreate()
+        shadowFile.recreate(contentLength)
+        rangeTmpFile = RangeTmpFile(tmpFile)
+        rangeTmpFile.write(contentLength, totalRanges, rangeSize)
     }
 
-    private fun ProducerScope<Progress>.startDownload(
-        taskInfo: TaskInfo,
+    private suspend fun startDownload(
+        downloadParams: DownloadParams,
+        downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     ) {
-        val progress = rangeTmpFile.lastProgress()
+        val last = rangeTmpFile.lastProgress()
+        downloadSize = last.downloadSize
+        totalSize = last.totalSize
 
-        val sendChannel = actor<RangeMsg>(DOWNLOAD_IO) {
+        val progressChannel = coroutineScope.actor<RangeMsg> {
             for (msg in channel) {
-                "actor ${Thread.currentThread().name}".log()
-                progress.apply { this.downloadSize += msg.readLen }
-                send(progress)
+                downloadSize += msg.readLen
             }
 
             shadowFile.renameTo(file)
             tmpFile.delete()
             response.body()?.closeQuietly()
-            close()
         }
 
-        rangeTmpFile.undoneRanges()
-            .forEach {
-                val innerDownloader = InnerDownloader(taskInfo, it, sendChannel)
-                with(innerDownloader) { start() }
+        val rangeChannel = Channel<InnerDownloader>(5)
+
+        val job = coroutineScope.launch {
+            repeat(5) {
+                coroutineScope.launch {
+                    rangeChannel.consumeEach {
+                        it.start()
+                    }
+                }
             }
+        }
+
+        val job1 = coroutineScope.launch {
+            rangeTmpFile.undoneRanges()
+                .forEach {
+                    val innerDownloader =
+                        InnerDownloader(downloadParams, downloadConfig, it, progressChannel)
+                    rangeChannel.send(innerDownloader)
+                }
+        }
+        job.join()
+        job1.join()
     }
 
 
     inner class InnerDownloader(
-        private val taskInfo: TaskInfo,
+        private val downloadParams: DownloadParams,
+        private val downloadConfig: DownloadConfig,
         private val range: Range,
         private val channel: SendChannel<RangeMsg>
     ) {
 
-        fun CoroutineScope.start() = launch(DOWNLOAD_IO) {
-            val url = taskInfo.task.url
-            val request = taskInfo.request
+        suspend fun start() = withContext(Dispatchers.IO) {
+            val url = downloadParams.url
             val rangeHeader = mapOf("Range" to "bytes=${range.current}-${range.end}")
 
-            "Range ${range.current}-${range.end} ${Thread.currentThread().name}".log()
-            val response = request.get(url, rangeHeader)
-
+            val response = request(url, rangeHeader)
             val body = response.body() ?: throw RuntimeException("Response body is NULL")
-
             val source = body.byteStream()
 
             val tmpFileBuffer = tmpFile.mappedByteBuffer(range.startByte(), RANGE_SIZE)
-            val shadowFileBuffer =
-                shadowFile.mappedByteBuffer(range.current, range.remainSize())
+            val shadowFileBuffer = shadowFile.mappedByteBuffer(range.current, range.remainSize())
 
             val buffer = ByteArray(8192)
             var readLen = source.read(buffer)
 
-            while (readLen != -1) {
+            while (isActive && readLen != -1) {
                 shadowFileBuffer.put(buffer, 0, readLen)
                 range.current += readLen
 

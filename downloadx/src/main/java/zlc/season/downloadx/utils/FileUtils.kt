@@ -1,6 +1,6 @@
 package zlc.season.downloadx.utils
 
-import zlc.season.downloadx.task.Task
+import zlc.season.downloadx.task.DownloadParams
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.MappedByteBuffer
@@ -16,12 +16,11 @@ fun File.tmp(): File {
     return File(tmpPath)
 }
 
-fun File.recreate(length: Long = 0L, block: () -> Unit = {}) {
+fun File.recreate(length: Long = 0L) {
     delete()
     val created = createNewFile()
     if (created) {
         setLength(length)
-        block()
     } else {
         throw IllegalStateException("File create failed!")
     }
@@ -50,10 +49,10 @@ fun File.clear() {
     delete()
 }
 
-internal fun Task.getDir(): File {
+internal fun DownloadParams.dir(): File {
     return File(savePath)
 }
 
-internal fun Task.getFile(): File {
+internal fun DownloadParams.file(): File {
     return File(savePath, saveName)
 }

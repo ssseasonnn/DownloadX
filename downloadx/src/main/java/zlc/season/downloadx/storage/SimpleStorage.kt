@@ -2,7 +2,7 @@ package zlc.season.downloadx.storage
 
 import android.content.Context.MODE_PRIVATE
 import zlc.season.claritypotion.ClarityPotion.Companion.clarityPotion
-import zlc.season.downloadx.task.Task
+import zlc.season.downloadx.task.DownloadParams
 
 object SimpleStorage : MemoryStorage() {
     private val sp by lazy {
@@ -10,52 +10,52 @@ object SimpleStorage : MemoryStorage() {
     }
 
     @Synchronized
-    override fun load(task: Task) {
-        super.load(task)
+    override fun load(downloadParams: DownloadParams) {
+        super.load(downloadParams)
 
-        if (task.isEmpty()) {
-            localLoad(task)
-            super.save(task)
-        }
+//        if (downloadParams.isEmpty()) {
+//            localLoad(downloadParams)
+//            super.save(downloadParams)
+//        }
     }
 
     @Synchronized
-    override fun save(task: Task) {
-        super.save(task)
-        localSave(task)
+    override fun save(downloadParams: DownloadParams) {
+        super.save(downloadParams)
+        localSave(downloadParams)
     }
 
     @Synchronized
-    override fun delete(task: Task) {
-        super.delete(task)
-        localDelete(task)
+    override fun delete(downloadParams: DownloadParams) {
+        super.delete(downloadParams)
+        localDelete(downloadParams)
     }
 
-    private fun localSave(task: Task) {
-        val key = task.hashCode().toString()
-        val value = task.taskName + "\n" + task.saveName + "\n" + task.savePath
+    private fun localSave(downloadParams: DownloadParams) {
+        val key = downloadParams.hashCode().toString()
+//        val value = downloadParams.taskName + "\n" + downloadParams.saveName + "\n" + downloadParams.savePath
 
-        val editor = sp.edit()
-        editor.putString(key, value)
-        editor.apply()
+//        val editor = sp.edit()
+//        editor.putString(key, value)
+//        editor.apply()
     }
 
-    private fun localLoad(task: Task) {
-        val key = task.hashCode().toString()
+    private fun localLoad(downloadParams: DownloadParams) {
+        val key = downloadParams.hashCode().toString()
         val value = sp.getString(key, "")
 
         if (!value.isNullOrEmpty()) {
             val splits = value.split("\n")
             if (splits.size == 3) {
-                task.taskName = splits[0]
-                task.saveName = splits[1]
-                task.savePath = splits[2]
+//                downloadParams.taskName = splits[0]
+//                downloadParams.saveName = splits[1]
+//                downloadParams.savePath = splits[2]
             }
         }
     }
 
-    private fun localDelete(task: Task) {
-        val key = task.hashCode().toString()
+    private fun localDelete(downloadParams: DownloadParams) {
+        val key = downloadParams.hashCode().toString()
         sp.edit().remove(key).apply()
     }
 }

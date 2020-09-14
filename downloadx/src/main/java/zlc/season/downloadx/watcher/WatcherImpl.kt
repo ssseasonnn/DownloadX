@@ -1,28 +1,28 @@
 package zlc.season.downloadx.watcher
 
-import zlc.season.downloadx.task.Task
-import zlc.season.downloadx.utils.getFile
+import zlc.season.downloadx.task.DownloadParams
+import zlc.season.downloadx.utils.file
 
 object WatcherImpl : Watcher {
     private val taskMap = mutableMapOf<String, String>()
     private val fileMap = mutableMapOf<String, String>()
 
     @Synchronized
-    override fun watch(task: Task) {
+    override fun watch(downloadParams: DownloadParams) {
         //check task
-        check(taskMap[task.tag()] == null) { "Task [${task.tag()} is exists!" }
+        check(taskMap[downloadParams.tag()] == null) { "Task [${downloadParams.tag()} is exists!" }
 
-        val filePath = task.getFile().canonicalPath
+        val filePath = downloadParams.file().canonicalPath
         //check file
         check(fileMap[filePath] == null) { "File [$filePath] is occupied!" }
 
-        taskMap[task.tag()] = task.tag()
+        taskMap[downloadParams.tag()] = downloadParams.tag()
         fileMap[filePath] = filePath
     }
 
     @Synchronized
-    override fun unwatch(task: Task) {
-        taskMap.remove(task.tag())
-        fileMap.remove(task.getFile().canonicalPath)
+    override fun unwatch(downloadParams: DownloadParams) {
+        taskMap.remove(downloadParams.tag())
+        fileMap.remove(downloadParams.file().canonicalPath)
     }
 }

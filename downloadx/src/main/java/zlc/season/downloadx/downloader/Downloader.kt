@@ -1,16 +1,50 @@
 package zlc.season.downloadx.downloader
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.actor
 import okhttp3.ResponseBody
 import retrofit2.Response
 import zlc.season.downloadx.Progress
-import zlc.season.downloadx.task.TaskInfo
+import zlc.season.downloadx.task.DownloadConfig
+import zlc.season.downloadx.task.DownloadParams
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+sealed class Action {
+    class QueryProgress(val progress: CompletableDeferred<Progress>) : Action()
+}
+
 interface Downloader {
-    suspend fun ProducerScope<Progress>.download(
-        taskInfo: TaskInfo,
+    var actor: SendChannel<Action>
+
+    suspend fun queryProgress(): Progress
+
+    suspend fun download(
+        downloadParams: DownloadParams,
+        downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     )
+}
+
+@ObsoleteCoroutinesApi
+abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Downloader {
+    protected var totalSize: Long = 0
+    protected var downloadSize: Long = 0
+    protected var isChunked: Boolean = false
+
+    override var actor = coroutineScope.actor<Action> {
+        for (action in channel) {
+            if (action is Action.QueryProgress) {
+                action.progress.complete(Progress(downloadSize, totalSize, isChunked))
+            }
+        }
+    }
+
+    override suspend fun queryProgress(): Progress {
+        val ack = CompletableDeferred<Progress>()
+        val queryProgress = Action.QueryProgress(ack)
+        actor.send(queryProgress)
+        return ack.await()
+    }
 }

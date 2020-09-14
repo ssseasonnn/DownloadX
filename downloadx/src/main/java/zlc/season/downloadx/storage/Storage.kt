@@ -1,11 +1,11 @@
 package zlc.season.downloadx.storage
 
-import zlc.season.downloadx.task.Task
+import zlc.season.downloadx.task.DownloadParams
 
 interface Storage {
-    fun load(task: Task)
+    fun load(downloadParams: DownloadParams)
 
-    fun save(task: Task)
+    fun save(downloadParams: DownloadParams)
 
-    fun delete(task: Task)
+    fun delete(downloadParams: DownloadParams)
 }

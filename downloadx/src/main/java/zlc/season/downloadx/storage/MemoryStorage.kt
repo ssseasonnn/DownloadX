@@ -1,29 +1,29 @@
 package zlc.season.downloadx.storage
 
-import zlc.season.downloadx.task.Task
+import zlc.season.downloadx.task.DownloadParams
 
 open class MemoryStorage : Storage {
     companion object {
         //memory cache
-        private val taskPool = mutableMapOf<Task, Task>()
+        private val taskPool = mutableMapOf<DownloadParams, DownloadParams>()
     }
 
     @Synchronized
-    override fun load(task: Task) {
-        val result = taskPool[task]
+    override fun load(downloadParams: DownloadParams) {
+        val result = taskPool[downloadParams]
         if (result != null) {
-            task.saveName = result.saveName
-            task.savePath = result.savePath
+            downloadParams.saveName = result.saveName
+            downloadParams.savePath = result.savePath
         }
     }
 
     @Synchronized
-    override fun save(task: Task) {
-        taskPool[task] = task
+    override fun save(downloadParams: DownloadParams) {
+        taskPool[downloadParams] = downloadParams
     }
 
     @Synchronized
-    override fun delete(task: Task) {
-        taskPool.remove(task)
+    override fun delete(downloadParams: DownloadParams) {
+        taskPool.remove(downloadParams)
     }
 }

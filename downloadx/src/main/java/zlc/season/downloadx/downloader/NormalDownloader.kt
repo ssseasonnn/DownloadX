@@ -1,58 +1,65 @@
 package zlc.season.downloadx.downloader
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.ProducerScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import okhttp3.ResponseBody
+import okio.IOException
 import okio.buffer
 import okio.sink
 import retrofit2.Response
-import zlc.season.downloadx.Progress
-import zlc.season.downloadx.task.TaskInfo
+import zlc.season.downloadx.task.DownloadConfig
+import zlc.season.downloadx.task.DownloadParams
 import zlc.season.downloadx.utils.*
 import java.io.File
+import java.io.FileOutputStream
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
-class NormalDownloader : Downloader {
+
+class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutineScope) {
     private var alreadyDownloaded = false
 
     private lateinit var file: File
     private lateinit var shadowFile: File
 
-    override suspend fun ProducerScope<Progress>.download(
-        taskInfo: TaskInfo,
+    override suspend fun download(
+        downloadParams: DownloadParams,
+        downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     ) {
-        val body = response.body() ?: throw RuntimeException("Response body is NULL")
+        val body = response.body()
+        if (body == null) {
+            "Url [${downloadParams.url}] response body is NULL!".log()
+            return
+        }
 
-        file = taskInfo.task.getFile()
+        file = downloadParams.file()
         shadowFile = file.shadow()
 
-        beforeDownload(taskInfo, response)
+        val contentLength = response.contentLength()
+        val isChunked = response.isChunked()
+
+        downloadPrepare(downloadParams, contentLength)
 
         if (alreadyDownloaded) {
-            send(Progress(response.contentLength(), response.contentLength()))
+            this.downloadSize = contentLength
+            this.totalSize = contentLength
+            this.isChunked = isChunked
         } else {
-            startDownload(
-                body, Progress(
-                    totalSize = response.contentLength(),
-                    isChunked = response.isChunked()
-                )
-            )
+            this.totalSize = contentLength
+            this.downloadSize = 0
+            this.isChunked = isChunked
+
+            startDownload(body)
         }
     }
 
-    private fun beforeDownload(taskInfo: TaskInfo, response: Response<ResponseBody>) {
+    private fun downloadPrepare(downloadParams: DownloadParams, contentLength: Long) {
         //make sure dir is exists
-        val fileDir = taskInfo.task.getDir()
+        val fileDir = downloadParams.dir()
         if (!fileDir.exists() || !fileDir.isDirectory) {
             fileDir.mkdirs()
         }
 
         if (file.exists()) {
-            if (taskInfo.validator.validate(file, response)) {
+            if (file.length() == contentLength) {
                 alreadyDownloaded = true
             } else {
                 file.delete()
@@ -63,24 +70,17 @@ class NormalDownloader : Downloader {
         }
     }
 
-    private fun ProducerScope<Progress>.startDownload(
-        body: ResponseBody,
-        progress: Progress
-    ) = launch(Dispatchers.IO) {
+    private suspend fun startDownload(body: ResponseBody) = withContext(Dispatchers.IO) {
         val source = body.source()
         val sink = shadowFile.sink().buffer()
         val buffer = sink.buffer
 
         var readLen = source.read(buffer, 8192L)
-        while (readLen != -1L) {
-            sink.emit()
-            send(progress.apply {
-                downloadSize += readLen
-            })
+        while (isActive && readLen != -1L) {
+            downloadSize += readLen
             readLen = source.read(buffer, 8192L)
         }
-        sink.flush()
         shadowFile.renameTo(file)
-        close()
+        totalSize = downloadSize
     }
 }

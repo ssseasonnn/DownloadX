@@ -6,6 +6,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.flow.*
 import zlc.season.downloadx.download
+import zlc.season.downloadx.utils.log
 import zlc.season.downloadxdemo.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
@@ -18,10 +19,13 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
         val url = "https://dldir1.qq.com/weixin/android/weixin7011android1600.apk"
 
         val task = download(url)
+        task.state()
+            .onEach { "MainActivity state: $it".log() }
+            .launchIn(this)
+
         task.progress(1000)
-            .onEach {
-                println(it.percentStr())
-            }.launchIn(this@MainActivity)
+            .onEach { "MainActivity progress: ${it.percentStr()}".log() }
+            .launchIn(this)
 
         binding.button.setOnClickListener {
             task.start()

@@ -27,6 +27,7 @@ interface Downloader {
     )
 }
 
+@OptIn(ObsoleteCoroutinesApi::class)
 abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Downloader {
     protected var totalSize: Long = 0L
     protected var downloadSize: Long = 0L

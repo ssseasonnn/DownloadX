@@ -12,7 +12,7 @@ import zlc.season.downloadx.utils.*
 import java.io.File
 import java.io.FileOutputStream
 
-
+@OptIn(ObsoleteCoroutinesApi::class)
 class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutineScope) {
     companion object {
         private const val TAG = "NormalDownloader"
@@ -33,7 +33,7 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         body.use {
             if (body == null) {
                 "url ${downloadParams.url} response body is NULL.".log(TAG)
-                return
+                throw RuntimeException()
             }
             file = downloadParams.file()
             shadowFile = file.shadow()

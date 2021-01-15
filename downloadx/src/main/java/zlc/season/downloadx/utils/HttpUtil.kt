@@ -34,7 +34,6 @@ fun Response<*>.isSupportRange(): Boolean {
     ) {
         return true
     }
-
     return false
 }
 

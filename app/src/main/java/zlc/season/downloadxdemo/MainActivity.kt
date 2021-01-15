@@ -17,8 +17,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
         val url = "https://dldir1.qq.com/weixin/android/weixin7011android1600.apk"
 
-        val task = url.download(this)
-
+        val task = download(url)
         task.progress(1000)
             .onEach {
                 println(it.percentStr())

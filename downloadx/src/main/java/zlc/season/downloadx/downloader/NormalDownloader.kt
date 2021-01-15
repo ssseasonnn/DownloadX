@@ -14,6 +14,11 @@ import java.io.FileOutputStream
 
 
 class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutineScope) {
+    companion object {
+        private const val TAG = "NormalDownloader"
+        private const val BUFFER_SIZE = 8192L
+    }
+
     private var alreadyDownloaded = false
 
     private lateinit var file: File
@@ -27,7 +32,7 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         val body = response.body()
         body.use {
             if (body == null) {
-                "Url [${downloadParams.url}] response body is NULL!".log()
+                "url ${downloadParams.url} response body is NULL.".log(TAG)
                 return
             }
             file = downloadParams.file()
@@ -42,11 +47,14 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
                 this.downloadSize = contentLength
                 this.totalSize = contentLength
                 this.isChunked = isChunked
+                "url ${downloadParams.url} already downloaded.".log(TAG)
             } else {
                 this.totalSize = contentLength
                 this.downloadSize = 0
                 this.isChunked = isChunked
+                "url ${downloadParams.url} start download.".log(TAG)
                 startDownload(body)
+                "url ${downloadParams.url} download complete.".log(TAG)
             }
         }
     }
@@ -75,10 +83,10 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         val sink = shadowFile.sink().buffer()
         val buffer = sink.buffer
 
-        var readLen = source.read(buffer, 8192L)
+        var readLen = source.read(buffer, BUFFER_SIZE)
         while (isActive && readLen != -1L) {
             downloadSize += readLen
-            readLen = source.read(buffer, 8192L)
+            readLen = source.read(buffer, BUFFER_SIZE)
         }
         shadowFile.renameTo(file)
         totalSize = downloadSize

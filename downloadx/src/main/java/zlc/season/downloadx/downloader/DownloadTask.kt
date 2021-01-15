@@ -18,18 +18,19 @@ open class DownloadTask(
     private var downloadJob: Job? = null
     private var downloader: Downloader? = null
 
-    private val coroutineScope = downloadConfig.coroutineScope ?: GlobalScope
+    private val coroutineScope = downloadConfig.coroutineScope
 
-    private val downloadStateFlow = MutableStateFlow(0)
+    private val downloadTrigger = MutableStateFlow(0)
 
     fun start() {
         if (downloadJob != null) {
             downloadJob?.cancel()
         }
         downloadJob = coroutineScope.launch {
+            "url ${downloadParams.url} download task start.".log()
             val response = request(downloadParams.url, downloadConfig.header)
             if (!response.isSuccessful) {
-                "Url [${downloadParams.url}] request failed!".log()
+                "url ${downloadParams.url} request failed.".log()
                 return@launch
             }
 
@@ -45,28 +46,29 @@ open class DownloadTask(
             } else {
                 NormalDownloader(coroutineScope)
             }
-            val downloadJob = async {
-                downloader?.download(downloadParams, downloadConfig, response)
-            }
-            val stateTriggerJob = async { stateTrigger() }
-            downloadJob.join()
-            stateTriggerJob.join()
+            val downloadDeferred = async { downloader?.download(downloadParams, downloadConfig, response) }
+            val triggerDeferred = async { stateTrigger() }
+            downloadDeferred.await()
+            triggerDeferred.await()
+
+            "url ${downloadParams.url} download task complete.".log()
         }
     }
 
     fun stop() {
         downloadJob?.cancel()
+        "url ${downloadParams.url} download task cancel.".log()
     }
 
     @FlowPreview
     fun progress(interval: Long = 100): Flow<Progress> {
-        return downloadStateFlow.flatMapConcat {
+        return downloadTrigger.flatMapConcat {
             flow {
                 var progress = progress()
                 if (progress.isComplete()) {
                     emit(progress)
                 } else {
-                    while (downloadJob?.isActive == true && !progress.isComplete()) {
+                    while (isDownloading() && !progress.isComplete()) {
                         delay(interval)
                         progress = progress()
                         emit(progress)
@@ -80,8 +82,12 @@ open class DownloadTask(
         return downloader?.queryProgress() ?: Progress()
     }
 
+    private fun isDownloading(): Boolean {
+        return downloadJob?.isActive == true
+    }
+
     private fun stateTrigger() {
-        downloadStateFlow.value = downloadStateFlow.value + 1
+        downloadTrigger.value = downloadTrigger.value + 1
     }
 
     private fun Progress.isComplete(): Boolean {

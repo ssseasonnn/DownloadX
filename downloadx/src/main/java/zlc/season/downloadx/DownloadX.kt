@@ -11,6 +11,5 @@ fun String.download(coroutineScope: CoroutineScope? = null): DownloadTask {
     val downloadParams = DownloadParams(this)
     val downloadConfig = DownloadConfig(coroutineScope)
     val downloadTask = DownloadTask(downloadParams, downloadConfig)
-    downloadTask.start()
     return downloadTask
 }

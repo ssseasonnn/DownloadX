@@ -1,10 +1,8 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion 28
-    buildToolsVersion "28.0.3"
 
     defaultConfig {
         applicationId "zlc.season.downloadxdemo"
@@ -23,6 +21,14 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility 1.8
+        targetCompatibility 1.8
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {

@@ -1,10 +1,7 @@
 package zlc.season.downloadx.downloader
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.*
 import zlc.season.downloadx.Progress
 import zlc.season.downloadx.core.Default
 import zlc.season.downloadx.core.request
@@ -14,7 +11,6 @@ import zlc.season.downloadx.utils.fileName
 import zlc.season.downloadx.utils.isSupportRange
 import zlc.season.downloadx.utils.log
 
-@ExperimentalCoroutinesApi
 open class DownloadTask(
     private val downloadParams: DownloadParams,
     private val downloadConfig: DownloadConfig
@@ -24,9 +20,12 @@ open class DownloadTask(
 
     private val coroutineScope = downloadConfig.coroutineScope ?: GlobalScope
 
-    private val progressStateFlow = MutableStateFlow(0)
+    private val downloadStateFlow = MutableStateFlow(0)
 
     fun start() {
+        if (downloadJob != null) {
+            downloadJob?.cancel()
+        }
         downloadJob = coroutineScope.launch {
             val response = request(downloadParams.url, downloadConfig.header)
             if (!response.isSuccessful) {
@@ -42,36 +41,39 @@ open class DownloadTask(
             }
 
             downloader = if (response.isSupportRange()) {
-                RangeDownloader(coroutineScope)
+                NormalDownloader(coroutineScope)
             } else {
                 NormalDownloader(coroutineScope)
             }
-            downloader?.download(downloadParams, downloadConfig, response)
-
-            stateTrigger()
+            val downloadJob = async {
+                downloader?.download(downloadParams, downloadConfig, response)
+            }
+            val stateTriggerJob = async { stateTrigger() }
+            downloadJob.join()
+            stateTriggerJob.join()
         }
-        downloadJob?.start()
     }
 
     fun stop() {
         downloadJob?.cancel()
     }
 
+    @FlowPreview
     fun progress(interval: Long = 100): Flow<Progress> {
-//        return progressStateFlow.flatMapConcat {
-        return flow {
-            var progress = progress()
-//                if (progress.isComplete()) {
-//                    emit(progress)
-//                } else {
-            while (downloadJob?.isActive == true && !progress.isComplete()) {
-                delay(interval)
-                progress = progress()
-                emit(progress)
+        return downloadStateFlow.flatMapConcat {
+            flow {
+                var progress = progress()
+                if (progress.isComplete()) {
+                    emit(progress)
+                } else {
+                    while (downloadJob?.isActive == true && !progress.isComplete()) {
+                        delay(interval)
+                        progress = progress()
+                        emit(progress)
+                    }
+                }
             }
         }
-//            }
-//        }
     }
 
     suspend fun progress(): Progress {
@@ -79,7 +81,7 @@ open class DownloadTask(
     }
 
     private fun stateTrigger() {
-        progressStateFlow.value = progressStateFlow.value + 1
+        downloadStateFlow.value = downloadStateFlow.value + 1
     }
 
     private fun Progress.isComplete(): Boolean {

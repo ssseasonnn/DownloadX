@@ -25,29 +25,29 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         response: Response<ResponseBody>
     ) {
         val body = response.body()
-        if (body == null) {
-            "Url [${downloadParams.url}] response body is NULL!".log()
-            return
-        }
+        body.use {
+            if (body == null) {
+                "Url [${downloadParams.url}] response body is NULL!".log()
+                return
+            }
+            file = downloadParams.file()
+            shadowFile = file.shadow()
 
-        file = downloadParams.file()
-        shadowFile = file.shadow()
+            val contentLength = response.contentLength()
+            val isChunked = response.isChunked()
 
-        val contentLength = response.contentLength()
-        val isChunked = response.isChunked()
+            downloadPrepare(downloadParams, contentLength)
 
-        downloadPrepare(downloadParams, contentLength)
-
-        if (alreadyDownloaded) {
-            this.downloadSize = contentLength
-            this.totalSize = contentLength
-            this.isChunked = isChunked
-        } else {
-            this.totalSize = contentLength
-            this.downloadSize = 0
-            this.isChunked = isChunked
-
-            startDownload(body)
+            if (alreadyDownloaded) {
+                this.downloadSize = contentLength
+                this.totalSize = contentLength
+                this.isChunked = isChunked
+            } else {
+                this.totalSize = contentLength
+                this.downloadSize = 0
+                this.isChunked = isChunked
+                startDownload(body)
+            }
         }
     }
 

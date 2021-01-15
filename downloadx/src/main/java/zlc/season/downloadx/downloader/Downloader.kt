@@ -27,16 +27,21 @@ interface Downloader {
     )
 }
 
-@ObsoleteCoroutinesApi
 abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Downloader {
-    protected var totalSize: Long = 0
-    protected var downloadSize: Long = 0
+    protected var totalSize: Long = 0L
+    protected var downloadSize: Long = 0L
     protected var isChunked: Boolean = false
+
+    private val progress = Progress()
 
     override var actor = coroutineScope.actor<Action> {
         for (action in channel) {
             if (action is Action.QueryProgress) {
-                action.progress.complete(Progress(downloadSize, totalSize, isChunked))
+                action.progress.complete(progress.also {
+                    it.downloadSize = downloadSize
+                    it.totalSize = totalSize
+                    it.isChunked = isChunked
+                })
             }
         }
     }

@@ -36,7 +36,9 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
             downloadSize = response.contentLength()
             totalSize = response.contentLength()
         } else {
-            totalSize = response.contentLength()
+            val last = rangeTmpFile.lastProgress()
+            downloadSize = last.downloadSize
+            totalSize = last.totalSize
             startDownload(downloadParams, downloadConfig, response)
         }
     }
@@ -93,10 +95,6 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
         downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     ) {
-        val last = rangeTmpFile.lastProgress()
-        downloadSize = last.downloadSize
-        totalSize = last.totalSize
-
         val progressChannel = coroutineScope.actor<RangeMsg> {
             for (msg in channel) {
                 downloadSize += msg.readLen

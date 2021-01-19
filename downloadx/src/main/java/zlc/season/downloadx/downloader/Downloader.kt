@@ -12,7 +12,7 @@ import zlc.season.downloadx.task.DownloadConfig
 import zlc.season.downloadx.task.DownloadParams
 
 sealed class Action {
-    class QueryProgress(val progress: CompletableDeferred<Progress>) : Action()
+    class QueryProgress(val completableDeferred: CompletableDeferred<Progress>) : Action()
 }
 
 interface Downloader {
@@ -38,7 +38,7 @@ abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Do
     override var actor = coroutineScope.actor<Action> {
         for (action in channel) {
             if (action is Action.QueryProgress) {
-                action.progress.complete(progress.also {
+                action.completableDeferred.complete(progress.also {
                     it.downloadSize = downloadSize
                     it.totalSize = totalSize
                     it.isChunked = isChunked

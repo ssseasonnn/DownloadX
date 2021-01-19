@@ -1,6 +1,7 @@
 package zlc.season.downloadx.downloader
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.*
 import zlc.season.downloadx.Progress
 import zlc.season.downloadx.State
@@ -12,7 +13,7 @@ import zlc.season.downloadx.utils.fileName
 import zlc.season.downloadx.utils.isSupportRange
 import zlc.season.downloadx.utils.log
 
-@OptIn(ObsoleteCoroutinesApi::class, FlowPreview::class)
+@OptIn(ObsoleteCoroutinesApi::class, FlowPreview::class, ExperimentalCoroutinesApi::class)
 open class DownloadTask(
     private val downloadParams: DownloadParams,
     private val downloadConfig: DownloadConfig
@@ -24,13 +25,15 @@ open class DownloadTask(
     private val downloadProgressFlow = MutableStateFlow(0)
     private val downloadStateFlow = MutableStateFlow<State>(State.Waiting)
 
+    private var progressProducer: ProducerScope<Progress>? = null
+
     fun start() {
         if (downloadJob != null) {
             downloadJob?.cancel()
         }
         val errorHandler = CoroutineExceptionHandler { _, throwable ->
+            throwable.message.log()
             notifyFailed()
-            "url ${downloadParams.url} download task failed.".log()
         }
         downloadJob = coroutineScope.launch(errorHandler) {
             "url ${downloadParams.url} download task start.".log()
@@ -58,29 +61,31 @@ open class DownloadTask(
             notifyDeferred.await()
 
             notifySucceed()
-            "url ${downloadParams.url} download task complete.".log()
         }
     }
 
     fun stop() {
         downloadJob?.cancel()
         notifyStopped()
-        "url ${downloadParams.url} download task stop.".log()
     }
 
-    fun progress(interval: Long = 100): Flow<Progress> {
+    fun progress(interval: Long = 200): Flow<Progress> {
         return downloadProgressFlow.flatMapConcat {
-            flow {
-                var progress = progress()
+            if (it == 0) return@flatMapConcat emptyFlow()
+
+            channelFlow {
+                progressProducer = this
+                var progress = getProgress()
                 if (progress.isComplete()) {
-                    emit(progress)
+                    send(progress)
                     "url ${downloadParams.url} progress ${progress.percentStr()}".log()
                 } else {
-                    while (isDownloading() && !progress.isComplete()) {
-                        delay(interval)
-                        progress = progress()
-                        emit(progress)
+                    while (currentCoroutineContext().isActive && isDownloading()) {
+                        progress = getProgress()
+                        send(progress)
                         "url ${downloadParams.url} progress ${progress.percentStr()}".log()
+
+                        delay(interval)
                     }
                 }
             }
@@ -89,7 +94,7 @@ open class DownloadTask(
 
     fun state(): Flow<State> = downloadStateFlow
 
-    suspend fun progress(): Progress {
+    suspend fun getProgress(): Progress {
         return downloader?.queryProgress() ?: Progress()
     }
 
@@ -99,19 +104,26 @@ open class DownloadTask(
 
     private fun notifyStarted() {
         downloadStateFlow.value = State.Started
-        downloadProgressFlow.value = downloadProgressFlow.value++
+        downloadProgressFlow.value = downloadProgressFlow.value + 1
     }
 
     private fun notifyStopped() {
         downloadStateFlow.value = State.Stopped
+        "url ${downloadParams.url} download task stop.".log()
     }
 
     private fun notifyFailed() {
         downloadStateFlow.value = State.Failed
+        "url ${downloadParams.url} download task failed.".log()
     }
 
-    private fun notifySucceed() {
+    private suspend fun notifySucceed() {
+        val progress = getProgress()
+        progressProducer?.send(progress)
+        progressProducer = null
+        "url ${downloadParams.url} progress ${progress.percentStr()}".log()
         downloadStateFlow.value = State.Succeed
+        "url ${downloadParams.url} download task complete.".log()
     }
 
     private fun Progress.isComplete(): Boolean {

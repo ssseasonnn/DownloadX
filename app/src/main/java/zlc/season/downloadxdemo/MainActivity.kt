@@ -16,15 +16,13 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
-        val url = "https://dldir1.qq.com/weixin/android/weixin7011android1600.apk"
-
-        val task = download(url)
+        val task = download(RE)
         task.state()
-            .onEach { "MainActivity state: $it".log() }
+            .onEach { "Main state: $it".log() }
             .launchIn(this)
 
-        task.progress(1000)
-            .onEach { "MainActivity progress: ${it.percentStr()}".log() }
+        task.progress()
+            .onEach { "Main progress: ${it.percentStr()}".log() }
             .launchIn(this)
 
         binding.button.setOnClickListener {

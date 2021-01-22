@@ -16,7 +16,7 @@ fun Closeable.closeQuietly() {
 }
 
 fun Response<*>.url(): String {
-    return raw().request().url().toString()
+    return raw().request.url.toString()
 }
 
 fun Response<*>.contentLength(): Long {

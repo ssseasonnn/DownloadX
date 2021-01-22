@@ -2,6 +2,7 @@ package zlc.season.downloadxdemo
 
 
 import com.google.gson.annotations.SerializedName
+import zlc.season.yasha.YashaItem
 
 data class AppListResp(
     @SerializedName("obj")
@@ -52,5 +53,5 @@ data class AppListResp(
 
         @SerializedName("versionName")
         val versionName: String = ""
-    )
+    ) : YashaItem
 }

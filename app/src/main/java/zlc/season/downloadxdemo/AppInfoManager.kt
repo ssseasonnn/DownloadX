@@ -10,10 +10,9 @@ object AppInfoManager {
         suspend fun get(@Url url: String): AppListResp
     }
 
-    private val url = "https://android.myapp.com/myapp/union/apps.htm?unionId=12"
-    private val api = apiCreator<Api>()
+    private const val url = "https://android.myapp.com/myapp/union/apps.htm?unionId=12"
 
     suspend fun getAppInfoList(): List<AppListResp.AppInfo> {
-        return api.get(url).appList
+        return apiCreator<Api>().get(url).appList
     }
 }

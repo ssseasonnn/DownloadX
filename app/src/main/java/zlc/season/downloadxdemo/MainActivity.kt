@@ -1,8 +1,16 @@
 package zlc.season.downloadxdemo
 
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import coil.load
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import zlc.season.bracer.start
+import zlc.season.downloadx.download
+import zlc.season.downloadx.downloader.DownloadTask
 import zlc.season.downloadxdemo.databinding.ActivityMainBinding
 import zlc.season.downloadxdemo.databinding.AppInfoItemBinding
 import zlc.season.yasha.YashaDataSource
@@ -17,22 +25,55 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
+        dataSource.retry.onEach {
+            binding.btnRetry.visibility = if (it) View.VISIBLE else View.GONE
+        }.launchIn(lifecycleScope)
+
+        binding.btnRetry.setOnClickListener {
+            dataSource.invalidate()
+        }
+
         binding.recyclerView.linear(dataSource) {
             renderBindingItem<AppListResp.AppInfo, AppInfoItemBinding> {
                 onBind {
                     itemBinding.title.text = data.appName
                     itemBinding.desc.text = data.editorIntro
                     itemBinding.icon.load(data.iconUrl)
+
+                    itemBinding.root.setOnClickListener {
+                        DetailActivity().apply {
+                            appInfo = data
+                        }.start(this@MainActivity)
+                    }
+                    itemBinding.button.setOnClickListener {
+                        if (data.downloadTask == null) {
+                            val downloadTask = lifecycleScope.download(data.apkUrl)
+                            data.downloadTask = downloadTask
+                        }
+
+                        data.downloadTask!!.start()
+
+                        data.downloadTask!!.progress()
+                            .onEach { itemBinding.button.setProgress(it) }
+                            .launchIn(lifecycleScope)
+                        data.downloadTask!!.state()
+                            .onEach { itemBinding.button.setState(it) }
+                            .launchIn(lifecycleScope)
+                    }
                 }
             }
         }
     }
 
     class AppListDataSource : YashaDataSource() {
+        val retry = MutableStateFlow(false)
+
         override suspend fun loadInitial(): List<YashaItem> {
             return try {
+                retry.value = false
                 AppInfoManager.getAppInfoList()
             } catch (e: Exception) {
+                retry.value = true
                 emptyList()
             }
         }

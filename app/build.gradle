@@ -44,6 +44,8 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "io.coil-kt:coil:1.1.1"
     implementation 'com.github.ssseasonnn:Yasha:1.1.1'
+    implementation 'com.github.ssseasonnn:Bracer:1.0.3'
+
     implementation project(path: ':downloadx')
 
     testImplementation 'junit:junit:4.12'

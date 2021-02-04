@@ -25,6 +25,7 @@
         android:layout_marginLeft="10dp"
         android:layout_marginEnd="10dp"
         android:layout_marginRight="10dp"
+        android:maxLines="1"
         android:textColor="@android:color/black"
         android:textSize="15sp"
         app:layout_constraintEnd_toStartOf="@+id/button"
@@ -50,13 +51,12 @@
         app:layout_constraintTop_toBottomOf="@+id/title"
         tools:text="desc" />
 
-    <Button
+    <zlc.season.downloadxdemo.ProgressButton
         android:id="@+id/button"
         android:layout_width="70dp"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:layout_marginRight="20dp"
         app:layout_constraintBottom_toBottomOf="@+id/icon"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/icon"
-        tools:text="下载" />
+        app:layout_constraintTop_toTopOf="@+id/icon" />
 </androidx.constraintlayout.widget.ConstraintLayout>

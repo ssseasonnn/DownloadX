@@ -2,6 +2,7 @@ package zlc.season.downloadxdemo
 
 
 import com.google.gson.annotations.SerializedName
+import zlc.season.downloadx.downloader.DownloadTask
 import zlc.season.yasha.YashaItem
 
 data class AppListResp(
@@ -53,5 +54,8 @@ data class AppListResp(
 
         @SerializedName("versionName")
         val versionName: String = ""
-    ) : YashaItem
+    ) : YashaItem {
+
+        var downloadTask: DownloadTask? = null
+    }
 }

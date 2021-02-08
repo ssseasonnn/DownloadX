@@ -1,4 +1,4 @@
-package zlc.season.downloadx.downloader
+package zlc.season.downloadx.core
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -7,10 +7,8 @@ import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
 import okhttp3.ResponseBody
 import retrofit2.Response
-import zlc.season.downloadx.core.request
-import zlc.season.downloadx.downloader.Range.Companion.RANGE_SIZE
-import zlc.season.downloadx.task.DownloadConfig
-import zlc.season.downloadx.task.DownloadParams
+import zlc.season.downloadx.core.Range.Companion.RANGE_SIZE
+import zlc.season.downloadx.helper.request
 import zlc.season.downloadx.utils.*
 import java.io.File
 

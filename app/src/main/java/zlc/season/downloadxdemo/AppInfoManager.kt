@@ -2,7 +2,7 @@ package zlc.season.downloadxdemo
 
 import retrofit2.http.GET
 import retrofit2.http.Url
-import zlc.season.downloadx.core.apiCreator
+import zlc.season.downloadx.helper.apiCreator
 
 object AppInfoManager {
     interface Api {

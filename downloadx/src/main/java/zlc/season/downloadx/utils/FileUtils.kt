@@ -1,6 +1,5 @@
 package zlc.season.downloadx.utils
 
-import zlc.season.downloadx.task.DownloadParams
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.MappedByteBuffer
@@ -47,12 +46,4 @@ fun File.clear() {
     shadow.delete()
     tmp.delete()
     delete()
-}
-
-internal fun DownloadParams.dir(): File {
-    return File(savePath)
-}
-
-internal fun DownloadParams.file(): File {
-    return File(savePath, saveName)
 }

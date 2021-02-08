@@ -1,4 +1,4 @@
-package zlc.season.downloadx.core
+package zlc.season.downloadx.helper
 
 import android.os.Environment
 import android.os.Environment.getExternalStoragePublicDirectory

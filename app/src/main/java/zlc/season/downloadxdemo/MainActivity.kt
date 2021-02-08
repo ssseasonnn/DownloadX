@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import zlc.season.bracer.start
 import zlc.season.downloadx.download
-import zlc.season.downloadx.downloader.DownloadTask
 import zlc.season.downloadxdemo.databinding.ActivityMainBinding
 import zlc.season.downloadxdemo.databinding.AppInfoItemBinding
 import zlc.season.yasha.YashaDataSource

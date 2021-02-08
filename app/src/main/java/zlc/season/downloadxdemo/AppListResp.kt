@@ -2,7 +2,7 @@ package zlc.season.downloadxdemo
 
 
 import com.google.gson.annotations.SerializedName
-import zlc.season.downloadx.downloader.DownloadTask
+import zlc.season.downloadx.core.DownloadTask
 import zlc.season.yasha.YashaItem
 
 data class AppListResp(

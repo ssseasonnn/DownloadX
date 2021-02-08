@@ -1,4 +1,4 @@
-package zlc.season.downloadx.task
+package zlc.season.downloadx.core
 
 
 open class DownloadParams(

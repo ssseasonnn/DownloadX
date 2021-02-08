@@ -1,21 +1,16 @@
-package zlc.season.downloadx.downloader
+package zlc.season.downloadx.core
 
 import kotlinx.coroutines.*
 import okhttp3.ResponseBody
-import okio.IOException
 import okio.buffer
 import okio.sink
 import retrofit2.Response
-import zlc.season.downloadx.task.DownloadConfig
-import zlc.season.downloadx.task.DownloadParams
 import zlc.season.downloadx.utils.*
 import java.io.File
-import java.io.FileOutputStream
 
 @OptIn(ObsoleteCoroutinesApi::class)
 class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutineScope) {
     companion object {
-        private const val TAG = "NormalDownloader"
         private const val BUFFER_SIZE = 8192L
     }
 
@@ -32,8 +27,7 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         val body = response.body()
         body.use {
             if (body == null) {
-                "url ${downloadParams.url} response body is NULL.".log(TAG)
-                throw RuntimeException()
+                throw RuntimeException("url ${downloadParams.url} response body is NULL.")
             }
             file = downloadParams.file()
             shadowFile = file.shadow()
@@ -47,14 +41,11 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
                 this.downloadSize = contentLength
                 this.totalSize = contentLength
                 this.isChunked = isChunked
-                "url ${downloadParams.url} already downloaded.".log(TAG)
             } else {
                 this.totalSize = contentLength
                 this.downloadSize = 0
                 this.isChunked = isChunked
-                "url ${downloadParams.url} start download.".log(TAG)
                 startDownload(body)
-                "url ${downloadParams.url} download complete.".log(TAG)
             }
         }
     }

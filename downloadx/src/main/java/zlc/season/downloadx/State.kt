@@ -6,4 +6,8 @@ sealed class State {
     object Stopped : State()
     object Failed : State()
     object Succeed : State()
+
+    fun isEnd(): Boolean {
+        return this is Stopped || this is Failed || this is Succeed
+    }
 }

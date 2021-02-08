@@ -1,4 +1,4 @@
-package zlc.season.downloadx.core
+package zlc.season.downloadx.helper
 
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
@@ -9,9 +9,8 @@ import retrofit2.http.GET
 import retrofit2.http.HeaderMap
 import retrofit2.http.Streaming
 import retrofit2.http.Url
-import zlc.season.downloadx.core.Default.FAKE_BASE_URL
+import zlc.season.downloadx.helper.Default.FAKE_BASE_URL
 import java.util.concurrent.TimeUnit
-
 
 val okHttpClient: OkHttpClient by lazy {
     OkHttpClient().newBuilder()
@@ -37,5 +36,15 @@ interface Api {
 
     @GET
     @Streaming
-    suspend fun get(@Url url: String, @HeaderMap headers: Headers): Response<ResponseBody>
+    suspend fun get(
+        @Url url: String,
+        @HeaderMap headers: Map<String, String>
+    ): Response<ResponseBody>
+}
+
+
+private val api = apiCreator<Api>()
+
+suspend fun request(url: String, headers: Map<String, String>): Response<ResponseBody> {
+    return api.get(url, headers)
 }

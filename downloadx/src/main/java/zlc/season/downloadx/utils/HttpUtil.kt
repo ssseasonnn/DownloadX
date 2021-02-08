@@ -110,6 +110,6 @@ fun getFileNameFromUrl(url: String): String {
 }
 
 private fun Response<*>.header(key: String): String {
-    val header = headers().get(key)
+    val header = headers()[key]
     return header ?: ""
 }

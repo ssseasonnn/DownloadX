@@ -39,6 +39,6 @@ infix fun Long.ratio(bottom: Long): Double {
         return 0.0
     }
     val result = (this * 100.0).toBigDecimal()
-        .divide((bottom * 1.0).toBigDecimal(), 2, BigDecimal.ROUND_HALF_UP)
+        .divide((bottom * 1.0).toBigDecimal(), 2, BigDecimal.ROUND_FLOOR)
     return result.toDouble()
 }

@@ -1,12 +1,8 @@
-package zlc.season.downloadx.downloader
+package zlc.season.downloadx.core
 
 import okio.*
 import okio.ByteString.Companion.decodeHex
-import retrofit2.Response
 import zlc.season.downloadx.Progress
-import zlc.season.downloadx.task.DownloadConfig
-import zlc.season.downloadx.utils.contentLength
-import zlc.season.downloadx.utils.calcRanges
 import java.io.File
 
 class RangeTmpFile(private val tmpFile: File) {

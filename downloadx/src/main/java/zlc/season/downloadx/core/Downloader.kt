@@ -1,15 +1,15 @@
-package zlc.season.downloadx.downloader
+package zlc.season.downloadx.core
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import okhttp3.ResponseBody
 import retrofit2.Response
 import zlc.season.downloadx.Progress
-import zlc.season.downloadx.task.DownloadConfig
-import zlc.season.downloadx.task.DownloadParams
+import java.io.File
 
 sealed class Action {
     class QueryProgress(val completableDeferred: CompletableDeferred<Progress>) : Action()
@@ -35,7 +35,7 @@ abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Do
 
     private val progress = Progress()
 
-    override var actor = coroutineScope.actor<Action> {
+    override var actor = GlobalScope.actor<Action> {
         for (action in channel) {
             if (action is Action.QueryProgress) {
                 action.completableDeferred.complete(progress.also {
@@ -52,5 +52,13 @@ abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Do
         val queryProgress = Action.QueryProgress(ack)
         actor.send(queryProgress)
         return ack.await()
+    }
+
+    fun DownloadParams.dir(): File {
+        return File(savePath)
+    }
+
+    fun DownloadParams.file(): File {
+        return File(savePath, saveName)
     }
 }

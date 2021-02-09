@@ -9,8 +9,9 @@ import retrofit2.http.GET
 import retrofit2.http.HeaderMap
 import retrofit2.http.Streaming
 import retrofit2.http.Url
-import zlc.season.downloadx.helper.Default.FAKE_BASE_URL
 import java.util.concurrent.TimeUnit
+
+const val FAKE_BASE_URL = "http://www.example.com"
 
 val okHttpClient: OkHttpClient by lazy {
     OkHttpClient().newBuilder()

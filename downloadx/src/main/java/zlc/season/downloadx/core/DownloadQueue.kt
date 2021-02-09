@@ -1,9 +1,10 @@
 package zlc.season.downloadx.core
 
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 import zlc.season.downloadx.State
+import zlc.season.downloadx.helper.Default
+import java.util.concurrent.ConcurrentHashMap
 
 interface DownloadQueue {
     val channel: Channel<DownloadTask>
@@ -15,22 +16,28 @@ object DefaultDownloadQueue : DownloadQueue {
 
     init {
         GlobalScope.launch {
-            consume()
+            repeat(Default.DEFAULT_TASK_CURRENCY) {
+                async(Dispatchers.IO) {
+                    consume()
+                }
+            }
         }
     }
 
-    override val channel: Channel<DownloadTask> = Channel(2)
-    private val list = mutableListOf<DownloadTask>()
+    // save task
+    private val map = ConcurrentHashMap<String, DownloadTask>()
+
+    override val channel: Channel<DownloadTask> = Channel()
 
     override suspend fun enqueue(downloadTask: DownloadTask) {
         if (contain(downloadTask)) throw RuntimeException("Task already exists!")
-        list.add(downloadTask)
+        map[downloadTask.params.tag()] = downloadTask
         channel.send(downloadTask)
     }
 
     private suspend fun consume() {
         for (task in channel) {
-            list.remove(task)
+            map.remove(task.params.tag())
             if (task.getState() == State.Waiting) {
                 task.realStart()
             }
@@ -38,12 +45,6 @@ object DefaultDownloadQueue : DownloadQueue {
     }
 
     private fun contain(task: DownloadTask): Boolean {
-        var flag = false
-        list.forEach {
-            if (it.params.tag() == task.params.tag()) {
-                flag = true
-            }
-        }
-        return flag
+        return map[task.params.tag()] != null
     }
 }

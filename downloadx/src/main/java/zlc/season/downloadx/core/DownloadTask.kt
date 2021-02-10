@@ -30,7 +30,7 @@ open class DownloadTask(
             try {
                 config.queue.enqueue(this@DownloadTask)
             } catch (e: Exception) {
-                e.message.log()
+                e.log()
                 notifyFailed()
             }
         }
@@ -43,6 +43,7 @@ open class DownloadTask(
     }
 
     suspend fun realStart() {
+        downloadJob?.cancel()
         downloadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
                 val response = request(params.url, config.header)
@@ -62,13 +63,13 @@ open class DownloadTask(
 
                 notifyStarted()
 
-                val deferred = async(Dispatchers.IO) { downloader?.download(params, config, response) }
+                val deferred =
+                    async(Dispatchers.IO) { downloader?.download(params, config, response) }
                 deferred.await()
 
                 notifySucceed()
             } catch (e: Exception) {
-                e.printStackTrace()
-                e.message.log()
+                e.log()
                 notifyFailed()
             }
         }

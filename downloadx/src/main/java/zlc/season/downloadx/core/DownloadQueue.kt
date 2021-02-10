@@ -10,6 +10,22 @@ interface DownloadQueue {
     val channel: Channel<DownloadTask>
 
     suspend fun enqueue(downloadTask: DownloadTask) {}
+
+    fun contain(tag: String): Boolean
+
+    fun get(tag: String): DownloadTask
+}
+
+object EmptyDownloadQueue : DownloadQueue {
+    override val channel: Channel<DownloadTask> = Channel()
+
+    override fun contain(tag: String): Boolean {
+        return false
+    }
+
+    override fun get(tag: String): DownloadTask {
+        return DownloadTask(GlobalScope, DownloadParams(""), DownloadConfig())
+    }
 }
 
 object DefaultDownloadQueue : DownloadQueue {
@@ -30,21 +46,25 @@ object DefaultDownloadQueue : DownloadQueue {
     override val channel: Channel<DownloadTask> = Channel()
 
     override suspend fun enqueue(downloadTask: DownloadTask) {
-        if (contain(downloadTask)) throw RuntimeException("Task already exists!")
-        map[downloadTask.params.tag()] = downloadTask
+        if (!contain(downloadTask.params.tag())) {
+            map[downloadTask.params.tag()] = downloadTask
+        }
         channel.send(downloadTask)
+    }
+
+    override fun contain(tag: String): Boolean {
+        return map[tag] != null
+    }
+
+    override fun get(tag: String): DownloadTask {
+        return map[tag]!!
     }
 
     private suspend fun consume() {
         for (task in channel) {
-            map.remove(task.params.tag())
             if (task.getState() == State.Waiting) {
                 task.realStart()
             }
         }
-    }
-
-    private fun contain(task: DownloadTask): Boolean {
-        return map[task.params.tag()] != null
     }
 }

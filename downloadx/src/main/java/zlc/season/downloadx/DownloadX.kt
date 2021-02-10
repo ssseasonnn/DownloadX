@@ -19,5 +19,9 @@ fun CoroutineScope.download(
     downloadConfig: DownloadConfig = DownloadConfig()
 ): DownloadTask {
     val downloadParams = DownloadParams(url, saveName, savePath)
-    return DownloadTask(this, downloadParams, downloadConfig)
+    return if (downloadConfig.queue.contain(downloadParams.tag())) {
+        downloadConfig.queue.get(downloadParams.tag())
+    } else {
+        DownloadTask(this, downloadParams, downloadConfig)
+    }
 }

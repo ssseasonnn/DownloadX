@@ -88,7 +88,7 @@ open class DownloadTask(
                 while (currentCoroutineContext().isActive) {
                     val progress = getProgress()
                     send(progress)
-//                    "url ${params.url} progress ${progress.percentStr()}".log()
+                    "url ${params.url} progress ${progress.percentStr()}".log()
 
                     if (currentState.isEnd() || progress.isComplete()) {
                         break

@@ -1,5 +1,6 @@
 package zlc.season.downloadx.utils
 
+import okhttp3.ResponseBody
 import retrofit2.Response
 import java.io.Closeable
 import java.util.*
@@ -13,6 +14,11 @@ fun Closeable.closeQuietly() {
         throw rethrown
     } catch (_: Exception) {
     }
+}
+
+fun Response<ResponseBody>.closeQuietly() {
+    body()?.closeQuietly()
+    errorBody()?.closeQuietly()
 }
 
 fun Response<*>.url(): String {

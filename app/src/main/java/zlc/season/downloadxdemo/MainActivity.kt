@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import zlc.season.bracer.start
@@ -52,12 +53,14 @@ class MainActivity : AppCompatActivity() {
 
                         data.downloadTask!!.start()
 
-                        data.downloadTask!!.progress()
-                            .onEach { itemBinding.button.setProgress(it) }
-                            .launchIn(lifecycleScope)
-                        data.downloadTask!!.state()
-                            .onEach { itemBinding.button.setState(it) }
-                            .launchIn(lifecycleScope)
+                        data.downloadTask?.let {
+                            it.state().combine(it.progress()) { l, r -> Pair(l, r) }
+                                .onEach {
+                                    itemBinding.button.setState(it.first)
+                                    itemBinding.button.setProgress(it.second)
+                                }
+                                .launchIn(lifecycleScope)
+                        }
                     }
                 }
             }

@@ -20,6 +20,7 @@ class ProgressButton @JvmOverloads constructor(
             binding.progress.isIndeterminate = false
             binding.progress.max = progress.totalSize.toInt()
             binding.progress.progress = progress.downloadSize.toInt()
+            binding.button.text = progress.percentStr()
         }
     }
 

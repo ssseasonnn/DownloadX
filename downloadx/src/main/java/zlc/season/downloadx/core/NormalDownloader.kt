@@ -24,11 +24,7 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     ) {
-        val body = response.body()
-        body.use {
-            if (body == null) {
-                throw RuntimeException("url ${downloadParams.url} response body is NULL.")
-            }
+        try {
             file = downloadParams.file()
             shadowFile = file.shadow()
 
@@ -45,8 +41,10 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
                 this.totalSize = contentLength
                 this.downloadSize = 0
                 this.isChunked = isChunked
-                startDownload(body)
+                startDownload(response.body()!!)
             }
+        } finally {
+            response.closeQuietly()
         }
     }
 
@@ -69,17 +67,22 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         }
     }
 
-    private suspend fun startDownload(body: ResponseBody) = withContext(Dispatchers.IO) {
-        val source = body.source()
-        val sink = shadowFile.sink().buffer()
-        val buffer = sink.buffer
+    private suspend fun startDownload(body: ResponseBody) = coroutineScope {
+        val deferred = async(Dispatchers.IO) {
+            val source = body.source()
+            val sink = shadowFile.sink().buffer()
+            val buffer = sink.buffer
 
-        var readLen = source.read(buffer, BUFFER_SIZE)
-        while (isActive && readLen != -1L) {
-            downloadSize += readLen
-            readLen = source.read(buffer, BUFFER_SIZE)
+            var readLen = source.read(buffer, BUFFER_SIZE)
+            while (isActive && readLen != -1L) {
+                downloadSize += readLen
+                readLen = source.read(buffer, BUFFER_SIZE)
+            }
         }
-        shadowFile.renameTo(file)
-        totalSize = downloadSize
+        deferred.await()
+
+        if (isActive) {
+            shadowFile.renameTo(file)
+        }
     }
 }

@@ -11,12 +11,10 @@ import retrofit2.Response
 import zlc.season.downloadx.Progress
 import java.io.File
 
-sealed class Action {
-    class QueryProgress(val completableDeferred: CompletableDeferred<Progress>) : Action()
-}
+class QueryProgress(val completableDeferred: CompletableDeferred<Progress>)
 
 interface Downloader {
-    var actor: SendChannel<Action>
+    var actor: SendChannel<QueryProgress>
 
     suspend fun queryProgress(): Progress
 
@@ -35,21 +33,19 @@ abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Do
 
     private val progress = Progress()
 
-    override var actor = GlobalScope.actor<Action> {
-        for (action in channel) {
-            if (action is Action.QueryProgress) {
-                action.completableDeferred.complete(progress.also {
-                    it.downloadSize = downloadSize
-                    it.totalSize = totalSize
-                    it.isChunked = isChunked
-                })
-            }
+    override var actor = GlobalScope.actor<QueryProgress> {
+        for (each in channel) {
+            each.completableDeferred.complete(progress.also {
+                it.downloadSize = downloadSize
+                it.totalSize = totalSize
+                it.isChunked = isChunked
+            })
         }
     }
 
     override suspend fun queryProgress(): Progress {
         val ack = CompletableDeferred<Progress>()
-        val queryProgress = Action.QueryProgress(ack)
+        val queryProgress = QueryProgress(ack)
         actor.send(queryProgress)
         return ack.await()
     }

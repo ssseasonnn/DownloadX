@@ -6,6 +6,7 @@ import zlc.season.downloadx.Progress
 import zlc.season.downloadx.State
 import zlc.season.downloadx.helper.Default
 import zlc.season.downloadx.helper.request
+import zlc.season.downloadx.utils.closeQuietly
 import zlc.season.downloadx.utils.fileName
 import zlc.season.downloadx.utils.log
 
@@ -42,10 +43,11 @@ open class DownloadTask(
     }
 
     suspend fun realStart() {
-        downloadJob = coroutineScope.launch {
+        downloadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
                 val response = request(params.url, config.header)
-                if (!response.isSuccessful) {
+                if (!response.isSuccessful || response.body() == null) {
+                    response.closeQuietly()
                     throw RuntimeException("request failed")
                 }
 
@@ -60,11 +62,12 @@ open class DownloadTask(
 
                 notifyStarted()
 
-                val deferred = async { downloader?.download(params, config, response) }
+                val deferred = async(Dispatchers.IO) { downloader?.download(params, config, response) }
                 deferred.await()
 
                 notifySucceed()
             } catch (e: Exception) {
+                e.printStackTrace()
                 e.message.log()
                 notifyFailed()
             }
@@ -85,7 +88,7 @@ open class DownloadTask(
                 while (currentCoroutineContext().isActive) {
                     val progress = getProgress()
                     send(progress)
-                    "url ${params.url} progress ${progress.percentStr()}".log()
+//                    "url ${params.url} progress ${progress.percentStr()}".log()
 
                     if (currentState.isEnd() || progress.isComplete()) {
                         break

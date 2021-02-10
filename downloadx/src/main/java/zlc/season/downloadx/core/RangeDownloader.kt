@@ -6,7 +6,6 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
 import okhttp3.ResponseBody
-import okhttp3.internal.wait
 import retrofit2.Response
 import zlc.season.downloadx.core.Range.Companion.RANGE_SIZE
 import zlc.season.downloadx.helper.Default
@@ -94,32 +93,21 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
         rangeTmpFile.write(contentLength, totalRanges, rangeSize)
     }
 
-    private suspend fun startDownload(
-        downloadParams: DownloadParams,
-        downloadConfig: DownloadConfig
-    ) {
-        "start download".log()
-
+    private suspend fun startDownload(params: DownloadParams, config: DownloadConfig) {
         val endChannel = Channel<Boolean>()
-        val progressChannel = coroutineScope.actor<RangeMsg> {
-            for (msg in channel) {
-                downloadSize += msg.readLen
-            }
 
-            shadowFile.renameTo(file)
-            tmpFile.delete()
+        val progressChannel = coroutineScope.actor<RangeMsg> {
+            channel.consumeEach { downloadSize += it.readLen }
 
             endChannel.send(true)
             endChannel.close()
-            "finish download".log()
         }
-
 
         val rangeChannel = coroutineScope.actor<Range> {
             repeat(Default.DEFAULT_RANGE_CURRENCY) {
                 val deferred = async(Dispatchers.IO) {
-                    for (range in channel) {
-                        range.download(downloadParams, downloadConfig, progressChannel)
+                    channel.consumeEach {
+                        it.download(params, config, progressChannel)
                     }
                 }
                 deferred.await()
@@ -132,10 +120,10 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
             rangeChannel.send(it)
         }
         rangeChannel.close()
-        "end download".log()
 
-        for (end in endChannel) {
-            "real end download".log()
+        endChannel.consumeEach {
+            shadowFile.renameTo(file)
+            tmpFile.delete()
         }
     }
 
@@ -146,8 +134,6 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
         channel: SendChannel<RangeMsg>
     ) = coroutineScope {
         val deferred = async(Dispatchers.IO) {
-            "Thread [${Thread.currentThread()}] download range: $current - $end".log()
-
             val url = params.url
             val rangeHeader = mapOf("Range" to "bytes=${current}-${end}")
 

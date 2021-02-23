@@ -19,7 +19,7 @@ interface Downloader {
     suspend fun queryProgress(): Progress
 
     suspend fun download(
-        downloadParams: DownloadParams,
+        downloadParam: DownloadParam,
         downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     )
@@ -50,11 +50,11 @@ abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Do
         return ack.await()
     }
 
-    fun DownloadParams.dir(): File {
+    fun DownloadParam.dir(): File {
         return File(savePath)
     }
 
-    fun DownloadParams.file(): File {
+    fun DownloadParam.file(): File {
         return File(savePath, saveName)
     }
 }

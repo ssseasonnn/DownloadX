@@ -8,7 +8,6 @@ import kotlinx.coroutines.channels.consumeEach
 import okhttp3.ResponseBody
 import retrofit2.Response
 import zlc.season.downloadx.core.Range.Companion.RANGE_SIZE
-import zlc.season.downloadx.helper.Default
 import zlc.season.downloadx.helper.request
 import zlc.season.downloadx.utils.*
 import java.io.File
@@ -21,16 +20,16 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
     private lateinit var rangeTmpFile: RangeTmpFile
 
     override suspend fun download(
-        downloadParams: DownloadParams,
+        downloadParam: DownloadParam,
         downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     ) {
         try {
-            file = downloadParams.file()
+            file = downloadParam.file()
             shadowFile = file.shadow()
             tmpFile = file.tmp()
 
-            val alreadyDownloaded = checkFiles(downloadParams, downloadConfig, response)
+            val alreadyDownloaded = checkFiles(downloadParam, downloadConfig, response)
 
             if (alreadyDownloaded) {
                 downloadSize = response.contentLength()
@@ -39,7 +38,7 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
                 val last = rangeTmpFile.lastProgress()
                 downloadSize = last.downloadSize
                 totalSize = last.totalSize
-                startDownload(downloadParams, downloadConfig)
+                startDownload(downloadParam, downloadConfig)
             }
         } finally {
             response.closeQuietly()
@@ -47,24 +46,24 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
     }
 
     private fun checkFiles(
-        downloadParams: DownloadParams,
-        downloadConfig: DownloadConfig,
+        param: DownloadParam,
+        config: DownloadConfig,
         response: Response<ResponseBody>
     ): Boolean {
         var alreadyDownloaded = false
 
         //make sure dir is exists
-        val fileDir = downloadParams.dir()
+        val fileDir = param.dir()
         if (!fileDir.exists() || !fileDir.isDirectory) {
             fileDir.mkdirs()
         }
 
         val contentLength = response.contentLength()
-        val rangeSize = downloadConfig.rangeSize
+        val rangeSize = config.rangeSize
         val totalRanges = response.calcRanges(rangeSize)
 
         if (file.exists()) {
-            if (file.length() == contentLength) {
+            if (config.validator.validate(file, param, response)) {
                 alreadyDownloaded = true
             } else {
                 file.delete()
@@ -93,21 +92,21 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
         rangeTmpFile.write(contentLength, totalRanges, rangeSize)
     }
 
-    private suspend fun startDownload(params: DownloadParams, config: DownloadConfig) {
+    private suspend fun startDownload(param: DownloadParam, config: DownloadConfig) {
         val endChannel = Channel<Boolean>()
 
-        val progressChannel = coroutineScope.actor<RangeMsg> {
-            channel.consumeEach { downloadSize += it.readLen }
+        val progressChannel = coroutineScope.actor<Int> {
+            channel.consumeEach { downloadSize += it }
 
             endChannel.send(true)
             endChannel.close()
         }
 
         val rangeChannel = coroutineScope.actor<Range> {
-            repeat(Default.DEFAULT_RANGE_CURRENCY) {
+            repeat(config.rangeCurrency) {
                 val deferred = async(Dispatchers.IO) {
                     channel.consumeEach {
-                        it.download(params, config, progressChannel)
+                        it.download(param, config, progressChannel)
                     }
                 }
                 deferred.await()
@@ -129,12 +128,12 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
 
 
     private suspend fun Range.download(
-        params: DownloadParams,
+        param: DownloadParam,
         config: DownloadConfig,
-        channel: SendChannel<RangeMsg>
+        channel: SendChannel<Int>
     ) = coroutineScope {
         val deferred = async(Dispatchers.IO) {
-            val url = params.url
+            val url = param.url
             val rangeHeader = mapOf("Range" to "bytes=${current}-${end}")
 
             val response = request(url, rangeHeader)
@@ -156,7 +155,7 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
 
                         tmpFileBuffer.putLong(16, current)
 
-                        channel.send(RangeMsg(readLen))
+                        channel.send(readLen)
 
                         readLen = source.read(buffer)
                     }
@@ -166,5 +165,3 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
         deferred.await()
     }
 }
-
-class RangeMsg(val readLen: Int)

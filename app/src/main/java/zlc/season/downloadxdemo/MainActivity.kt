@@ -3,8 +3,8 @@ package zlc.season.downloadxdemo
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import coil.load
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
@@ -21,13 +21,15 @@ class MainActivity : AppCompatActivity() {
     private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     private val dataSource by lazy { AppListDataSource() }
 
+    private val coroutineScope = MainScope()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
         dataSource.retry.onEach {
             binding.btnRetry.visibility = if (it) View.VISIBLE else View.GONE
-        }.launchIn(lifecycleScope)
+        }.launchIn(coroutineScope)
 
         binding.btnRetry.setOnClickListener {
             dataSource.invalidate()
@@ -35,6 +37,22 @@ class MainActivity : AppCompatActivity() {
 
         binding.recyclerView.linear(dataSource) {
             renderBindingItem<AppListResp.AppInfo, AppInfoItemBinding> {
+                onAttach {
+                    if (data.downloadTask == null) {
+                        val downloadTask = coroutineScope.download(data.apkUrl)
+                        data.downloadTask = downloadTask
+                    }
+
+                    data.downloadTask?.let {
+                        data.progressJob?.cancel()
+                        data.progressJob = it.state().combine(it.progress()) { l, r -> Pair(l, r) }
+                            .onEach {
+                                itemBinding.button.setState(it.first)
+                                itemBinding.button.setProgress(it.second)
+                            }
+                            .launchIn(coroutineScope)
+                    }
+                }
                 onBind {
                     itemBinding.title.text = data.appName
                     itemBinding.desc.text = data.editorIntro
@@ -46,22 +64,12 @@ class MainActivity : AppCompatActivity() {
                         }.start(this@MainActivity)
                     }
                     itemBinding.button.setOnClickListener {
-                        if (data.downloadTask == null) {
-                            val downloadTask = lifecycleScope.download(data.apkUrl)
-                            data.downloadTask = downloadTask
-                        }
-
-                        data.downloadTask!!.start()
-
-                        data.downloadTask?.let {
-                            it.state().combine(it.progress()) { l, r -> Pair(l, r) }
-                                .onEach {
-                                    itemBinding.button.setState(it.first)
-                                    itemBinding.button.setProgress(it.second)
-                                }
-                                .launchIn(lifecycleScope)
-                        }
+                        data.downloadTask?.start()
                     }
+                }
+
+                onDetach {
+                    data.progressJob?.cancel()
                 }
             }
         }
@@ -75,6 +83,7 @@ class MainActivity : AppCompatActivity() {
                 retry.value = false
                 AppInfoManager.getAppInfoList()
             } catch (e: Exception) {
+                e.printStackTrace()
                 retry.value = true
                 emptyList()
             }

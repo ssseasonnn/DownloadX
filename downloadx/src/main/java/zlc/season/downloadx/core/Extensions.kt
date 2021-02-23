@@ -23,8 +23,7 @@ object DefaultDownloadDispatcher : DownloadDispatcher {
 interface FileValidator {
     fun validate(
         file: File,
-        param: DownloadParams,
-        config: DownloadConfig,
+        param: DownloadParam,
         resp: Response<ResponseBody>
     ): Boolean
 }
@@ -32,8 +31,7 @@ interface FileValidator {
 object DefaultFileValidator : FileValidator {
     override fun validate(
         file: File,
-        param: DownloadParams,
-        config: DownloadConfig,
+        param: DownloadParam,
         resp: Response<ResponseBody>
     ): Boolean {
         return file.length() == resp.contentLength()

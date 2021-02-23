@@ -20,18 +20,18 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
     private lateinit var shadowFile: File
 
     override suspend fun download(
-        downloadParams: DownloadParams,
+        downloadParam: DownloadParam,
         downloadConfig: DownloadConfig,
         response: Response<ResponseBody>
     ) {
         try {
-            file = downloadParams.file()
+            file = downloadParam.file()
             shadowFile = file.shadow()
 
             val contentLength = response.contentLength()
             val isChunked = response.isChunked()
 
-            downloadPrepare(downloadParams, contentLength)
+            downloadPrepare(downloadParam, contentLength)
 
             if (alreadyDownloaded) {
                 this.downloadSize = contentLength
@@ -48,9 +48,9 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
         }
     }
 
-    private fun downloadPrepare(downloadParams: DownloadParams, contentLength: Long) {
+    private fun downloadPrepare(downloadParam: DownloadParam, contentLength: Long) {
         //make sure dir is exists
-        val fileDir = downloadParams.dir()
+        val fileDir = downloadParam.dir()
         if (!fileDir.exists() || !fileDir.isDirectory) {
             fileDir.mkdirs()
         }

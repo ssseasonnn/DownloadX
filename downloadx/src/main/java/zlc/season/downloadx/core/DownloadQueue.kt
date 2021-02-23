@@ -2,69 +2,57 @@ package zlc.season.downloadx.core
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import zlc.season.downloadx.State
+import kotlinx.coroutines.channels.consumeEach
 import zlc.season.downloadx.helper.Default
+import zlc.season.downloadx.helper.Default.MAX_TASK_NUMBER
 import java.util.concurrent.ConcurrentHashMap
 
 interface DownloadQueue {
-    val channel: Channel<DownloadTask>
-
-    suspend fun enqueue(downloadTask: DownloadTask) {}
+    suspend fun enqueue(task: DownloadTask)
 
     fun contain(tag: String): Boolean
 
     fun get(tag: String): DownloadTask
 }
 
-object EmptyDownloadQueue : DownloadQueue {
-    override val channel: Channel<DownloadTask> = Channel()
+class DefaultDownloadQueue private constructor(private val maxTask: Int) : DownloadQueue {
+    companion object {
+        private var instance: DefaultDownloadQueue? = null
 
-    override fun contain(tag: String): Boolean {
-        return false
+        fun get(maxTask: Int = MAX_TASK_NUMBER): DefaultDownloadQueue {
+            if (instance == null) {
+                instance = DefaultDownloadQueue(maxTask)
+            }
+            return instance!!
+        }
     }
 
-    override fun get(tag: String): DownloadTask {
-        return DownloadTask(GlobalScope, DownloadParams(""), DownloadConfig())
-    }
-}
-
-object DefaultDownloadQueue : DownloadQueue {
+    private val channel = Channel<DownloadTask>()
+    private val taskMap = ConcurrentHashMap<String, DownloadTask>()
 
     init {
         GlobalScope.launch {
-            repeat(Default.DEFAULT_TASK_CURRENCY) {
-                async(Dispatchers.IO) {
-                    consume()
+            repeat(maxTask) {
+                val deferred = async(Dispatchers.IO) {
+                    channel.consumeEach { it.realStart() }
                 }
+                deferred.await()
             }
         }
     }
 
-    // save task
-    private val map = ConcurrentHashMap<String, DownloadTask>()
-
-    override val channel: Channel<DownloadTask> = Channel()
-
-    override suspend fun enqueue(downloadTask: DownloadTask) {
-        if (!contain(downloadTask.params.tag())) {
-            map[downloadTask.params.tag()] = downloadTask
+    override suspend fun enqueue(task: DownloadTask) {
+        if (!contain(task.param.tag())) {
+            taskMap[task.param.tag()] = task
         }
-        channel.send(downloadTask)
+        channel.send(task)
     }
 
     override fun contain(tag: String): Boolean {
-        return map[tag] != null
+        return taskMap[tag] != null
     }
 
     override fun get(tag: String): DownloadTask {
-        return map[tag]!!
-    }
-
-    private suspend fun consume() {
-        for (task in channel) {
-            if (task.getState() == State.Waiting) {
-                task.realStart()
-            }
-        }
+        return taskMap[tag]!!
     }
 }

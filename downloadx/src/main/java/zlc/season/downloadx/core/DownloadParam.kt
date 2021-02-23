@@ -1,10 +1,11 @@
 package zlc.season.downloadx.core
 
 
-open class DownloadParams(
+open class DownloadParam(
     var url: String,
     var saveName: String = "",
     var savePath: String = "",
+    var extra: String = ""
 ) {
 
     /**
@@ -17,7 +18,7 @@ open class DownloadParams(
         if (other == null) return false
         if (this === other) return true
 
-        return if (other is DownloadParams) {
+        return if (other is DownloadParam) {
             tag() == other.tag()
         } else {
             false

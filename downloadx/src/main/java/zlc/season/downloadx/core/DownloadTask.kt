@@ -13,7 +13,7 @@ import zlc.season.downloadx.utils.log
 @OptIn(ObsoleteCoroutinesApi::class, FlowPreview::class, ExperimentalCoroutinesApi::class)
 open class DownloadTask(
     val coroutineScope: CoroutineScope,
-    val params: DownloadParams,
+    val param: DownloadParam,
     val config: DownloadConfig
 ) {
     private var downloadJob: Job? = null
@@ -46,17 +46,17 @@ open class DownloadTask(
         downloadJob?.cancel()
         downloadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
-                val response = request(params.url, config.header)
+                val response = request(param.url, config.header)
                 if (!response.isSuccessful || response.body() == null) {
                     response.closeQuietly()
                     throw RuntimeException("request failed")
                 }
 
-                if (params.saveName.isEmpty()) {
-                    params.saveName = response.fileName()
+                if (param.saveName.isEmpty()) {
+                    param.saveName = response.fileName()
                 }
-                if (params.savePath.isEmpty()) {
-                    params.savePath = Default.DEFAULT_SAVE_PATH
+                if (param.savePath.isEmpty()) {
+                    param.savePath = Default.DEFAULT_SAVE_PATH
                 }
 
                 downloader = config.dispatcher.dispatch(this@DownloadTask, response)
@@ -64,7 +64,7 @@ open class DownloadTask(
                 notifyStarted()
 
                 val deferred =
-                    async(Dispatchers.IO) { downloader?.download(params, config, response) }
+                    async(Dispatchers.IO) { downloader?.download(param, config, response) }
                 deferred.await()
 
                 notifySucceed()
@@ -89,7 +89,7 @@ open class DownloadTask(
                 while (currentCoroutineContext().isActive) {
                     val progress = getProgress()
                     send(progress)
-                    "url ${params.url} progress ${progress.percentStr()}".log()
+                    "url ${param.url} progress ${progress.percentStr()}".log()
 
                     if (currentState.isEnd() || progress.isComplete()) {
                         break
@@ -112,32 +112,32 @@ open class DownloadTask(
     private fun notifyWaiting() {
         currentState = State.Waiting
         downloadStateFlow.value = State.Waiting
-        "url ${params.url} download task waiting.".log()
+        "url ${param.url} download task waiting.".log()
     }
 
     private fun notifyStarted() {
         currentState = State.Started
         downloadStateFlow.value = State.Started
         downloadProgressFlow.value = downloadProgressFlow.value + 1
-        "url ${params.url} download task start.".log()
+        "url ${param.url} download task start.".log()
     }
 
     private fun notifyStopped() {
         currentState = State.Stopped
         downloadStateFlow.value = State.Stopped
-        "url ${params.url} download task stop.".log()
+        "url ${param.url} download task stop.".log()
     }
 
     private fun notifyFailed() {
         currentState = State.Failed
         downloadStateFlow.value = State.Failed
-        "url ${params.url} download task failed.".log()
+        "url ${param.url} download task failed.".log()
     }
 
     private fun notifySucceed() {
         currentState = State.Succeed
         downloadStateFlow.value = State.Succeed
-        "url ${params.url} download task complete.".log()
+        "url ${param.url} download task complete.".log()
     }
 
     private fun Progress.isComplete(): Boolean {

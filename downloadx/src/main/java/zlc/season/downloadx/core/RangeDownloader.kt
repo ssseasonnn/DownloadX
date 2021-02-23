@@ -142,7 +142,7 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
                 throw RuntimeException("Request failed!")
             }
 
-            response.body()!!.use {
+            response.body()?.use {
                 it.byteStream().use { source ->
                     val tmpFileBuffer = tmpFile.mappedByteBuffer(startByte(), RANGE_SIZE)
                     val shadowFileBuffer = shadowFile.mappedByteBuffer(current, remainSize())

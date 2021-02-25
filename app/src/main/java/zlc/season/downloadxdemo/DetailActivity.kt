@@ -2,9 +2,16 @@ package zlc.season.downloadxdemo
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import coil.load
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import zlc.season.bracer.mutableParams
 import zlc.season.bracer.params
+import zlc.season.downloadx.State
+import zlc.season.downloadx.download
 import zlc.season.downloadxdemo.databinding.ActivityDetailBinding
 
 class DetailActivity : AppCompatActivity() {
@@ -19,5 +26,22 @@ class DetailActivity : AppCompatActivity() {
         binding.title.text = appInfo.appName
         binding.desc.text = appInfo.editorIntro
 
+        val downloadTask = GlobalScope.download(appInfo.apkUrl)
+
+        downloadTask.progress()
+            .onEach { binding.button.setProgress(it) }
+            .launchIn(lifecycleScope)
+
+        downloadTask.state()
+            .onEach { binding.button.setState(it) }
+            .launchIn(lifecycleScope)
+
+        binding.button.setOnClickListener {
+            if (downloadTask.isStarted()) {
+                downloadTask.stop()
+            } else {
+                downloadTask.start()
+            }
+        }
     }
 }

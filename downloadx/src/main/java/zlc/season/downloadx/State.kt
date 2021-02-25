@@ -1,6 +1,7 @@
 package zlc.season.downloadx
 
 sealed class State {
+    object None : State()
     object Waiting : State()
     object Started : State()
     object Stopped : State()

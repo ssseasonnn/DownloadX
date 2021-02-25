@@ -26,6 +26,9 @@ class ProgressButton @JvmOverloads constructor(
 
     fun setState(state: State) {
         when (state) {
+            is State.None -> {
+                binding.button.text = "下载"
+            }
             is State.Waiting -> {
                 binding.button.text = "等待中"
             }

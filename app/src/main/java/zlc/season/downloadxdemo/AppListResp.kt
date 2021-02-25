@@ -57,7 +57,9 @@ data class AppListResp(
         val versionName: String = ""
     ) : YashaItem {
 
+        @Transient
         var downloadTask: DownloadTask? = null
+        @Transient
         var progressJob: Job? = null
     }
 }

@@ -3,7 +3,6 @@ package zlc.season.downloadx.core
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
-import zlc.season.downloadx.helper.Default
 import zlc.season.downloadx.helper.Default.MAX_TASK_NUMBER
 import java.util.concurrent.ConcurrentHashMap
 
@@ -34,7 +33,7 @@ class DefaultDownloadQueue private constructor(private val maxTask: Int) : Downl
         GlobalScope.launch {
             repeat(maxTask) {
                 val deferred = async(Dispatchers.IO) {
-                    channel.consumeEach { it.realStart() }
+                    channel.consumeEach { it.suspendStart() }
                 }
                 deferred.await()
             }

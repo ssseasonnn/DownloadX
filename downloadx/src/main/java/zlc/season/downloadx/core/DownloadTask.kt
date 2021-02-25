@@ -20,9 +20,17 @@ open class DownloadTask(
     private var downloader: Downloader? = null
 
     private val downloadProgressFlow = MutableStateFlow(0)
-    private val downloadStateFlow = MutableStateFlow<State>(State.Waiting)
+    private val downloadStateFlow = MutableStateFlow<State>(State.None)
 
-    private var currentState: State = State.Waiting
+    private var currentState: State = State.None
+
+    fun isStarted(): Boolean {
+        return currentState == State.Waiting || currentState == State.Started
+    }
+
+    fun canStart(): Boolean {
+        return currentState == State.None || currentState == State.Failed || currentState == State.Stopped
+    }
 
     fun start() {
         coroutineScope.launch {
@@ -38,11 +46,13 @@ open class DownloadTask(
 
     fun startNow() {
         coroutineScope.launch {
-            realStart()
+            suspendStart()
         }
     }
 
-    suspend fun realStart() {
+    suspend fun suspendStart() {
+        if (downloadJob?.isActive == true) return
+
         downloadJob?.cancel()
         downloadJob = coroutineScope.launch(Dispatchers.IO) {
             try {
@@ -63,14 +73,15 @@ open class DownloadTask(
 
                 notifyStarted()
 
-                val deferred =
-                    async(Dispatchers.IO) { downloader?.download(param, config, response) }
+                val deferred = async(Dispatchers.IO) { downloader?.download(param, config, response) }
                 deferred.await()
 
                 notifySucceed()
             } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    notifyFailed()
+                }
                 e.log()
-                notifyFailed()
             }
         }
         downloadJob?.join()
@@ -86,12 +97,12 @@ open class DownloadTask(
             if (it == 0) return@flatMapConcat emptyFlow()
 
             channelFlow {
-                while (currentCoroutineContext().isActive) {
+                while (currentCoroutineContext().isActive && !currentState.isEnd()) {
                     val progress = getProgress()
                     send(progress)
                     "url ${param.url} progress ${progress.percentStr()}".log()
 
-                    if (currentState.isEnd() || progress.isComplete()) {
+                    if (progress.isComplete()) {
                         break
                     }
 

@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import coil.load
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -39,7 +40,7 @@ class MainActivity : AppCompatActivity() {
             renderBindingItem<AppListResp.AppInfo, AppInfoItemBinding> {
                 onAttach {
                     if (data.downloadTask == null) {
-                        val downloadTask = coroutineScope.download(data.apkUrl)
+                        val downloadTask = GlobalScope.download(data.apkUrl)
                         data.downloadTask = downloadTask
                     }
 

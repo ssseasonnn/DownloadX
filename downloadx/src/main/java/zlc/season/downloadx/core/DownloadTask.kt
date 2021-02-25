@@ -55,10 +55,9 @@ open class DownloadTask(
 
         downloadJob?.cancel()
         downloadJob = coroutineScope.launch(Dispatchers.IO) {
+            val response = request(param.url, config.header)
             try {
-                val response = request(param.url, config.header)
                 if (!response.isSuccessful || response.body() == null) {
-                    response.closeQuietly()
                     throw RuntimeException("request failed")
                 }
 
@@ -82,6 +81,8 @@ open class DownloadTask(
                     notifyFailed()
                 }
                 e.log()
+            } finally {
+                response.closeQuietly()
             }
         }
         downloadJob?.join()

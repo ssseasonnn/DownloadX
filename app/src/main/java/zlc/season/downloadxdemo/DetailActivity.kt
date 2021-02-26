@@ -28,10 +28,6 @@ class DetailActivity : AppCompatActivity() {
 
         val downloadTask = GlobalScope.download(appInfo.apkUrl)
 
-        downloadTask.progress()
-            .onEach { binding.button.setProgress(it) }
-            .launchIn(lifecycleScope)
-
         downloadTask.state()
             .onEach { binding.button.setState(it) }
             .launchIn(lifecycleScope)

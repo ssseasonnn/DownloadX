@@ -16,7 +16,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:max="100"
-        tools:progress="20" />
+        tools:progress="90" />
 
     <TextView
         android:id="@+id/button"

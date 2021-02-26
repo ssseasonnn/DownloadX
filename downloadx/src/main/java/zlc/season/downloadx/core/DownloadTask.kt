@@ -16,24 +16,26 @@ open class DownloadTask(
     val param: DownloadParam,
     val config: DownloadConfig
 ) {
+    private val stateHolder by lazy { StateHolder() }
     private var downloadJob: Job? = null
     private var downloader: Downloader? = null
 
     private val downloadProgressFlow = MutableStateFlow(0)
-    private val downloadStateFlow = MutableStateFlow<State>(State.None)
+    private val downloadStateFlow = MutableStateFlow<State>(stateHolder.none)
 
-    private var currentState: State = State.None
+    private var currentState: State = stateHolder.none
 
     fun isStarted(): Boolean {
-        return currentState == State.Waiting || currentState == State.Started
+        return currentState is State.Waiting || currentState is State.Downloading
     }
 
     fun canStart(): Boolean {
-        return currentState == State.None || currentState == State.Failed || currentState == State.Stopped
+        return currentState is State.None || currentState is State.Failed || currentState is State.Stopped
     }
 
     fun start() {
         coroutineScope.launch {
+            if (isStarted()) return@launch
             notifyWaiting()
             try {
                 config.queue.enqueue(this@DownloadTask)
@@ -41,12 +43,6 @@ open class DownloadTask(
                 e.log()
                 notifyFailed()
             }
-        }
-    }
-
-    fun startNow() {
-        coroutineScope.launch {
-            suspendStart()
         }
     }
 
@@ -89,23 +85,26 @@ open class DownloadTask(
     }
 
     fun stop() {
-        downloadJob?.cancel()
-        notifyStopped()
+        coroutineScope.launch {
+            if (currentState.isEnd()) return@launch
+            downloadJob?.cancel()
+            notifyStopped()
+        }
     }
 
-    fun progress(interval: Long = 200): Flow<Progress> {
+    fun progress(interval: Long = 200, ensureLast: Boolean = false): Flow<Progress> {
         return downloadProgressFlow.flatMapConcat {
             if (it == 0) return@flatMapConcat emptyFlow()
 
             channelFlow {
-                while (currentCoroutineContext().isActive && !currentState.isEnd()) {
+                while (currentCoroutineContext().isActive) {
                     val progress = getProgress()
+                    if (!ensureLast && currentState.isEnd()) break
+
                     send(progress)
                     "url ${param.url} progress ${progress.percentStr()}".log()
 
-                    if (progress.isComplete()) {
-                        break
-                    }
+                    if (progress.isComplete()) break
 
                     delay(interval)
                 }
@@ -113,46 +112,59 @@ open class DownloadTask(
         }
     }
 
-    fun state(): Flow<State> = downloadStateFlow
+    fun state(): Flow<State> {
+        return downloadStateFlow.combine(progress()) { l, r -> l.apply { progress = r } }
+    }
 
     suspend fun getProgress(): Progress {
-        return downloader?.queryProgress() ?: Progress()
+        val progress = downloader?.queryProgress() ?: Progress()
+        println(progress.percent())
+        return progress
     }
 
     fun getState() = currentState
 
-    private fun notifyWaiting() {
-        currentState = State.Waiting
-        downloadStateFlow.value = State.Waiting
+    private suspend fun notifyWaiting() {
+        currentState = stateHolder.waiting.apply { progress = getProgress() }
+        downloadStateFlow.value = currentState
         "url ${param.url} download task waiting.".log()
     }
 
-    private fun notifyStarted() {
-        currentState = State.Started
-        downloadStateFlow.value = State.Started
+    private suspend fun notifyStarted() {
+        currentState = stateHolder.downloading.apply { progress = getProgress() }
+        downloadStateFlow.value = currentState
         downloadProgressFlow.value = downloadProgressFlow.value + 1
         "url ${param.url} download task start.".log()
     }
 
-    private fun notifyStopped() {
-        currentState = State.Stopped
-        downloadStateFlow.value = State.Stopped
+    private suspend fun notifyStopped() {
+        currentState = stateHolder.stopped.apply { progress = getProgress() }
+        downloadStateFlow.value = currentState
         "url ${param.url} download task stop.".log()
     }
 
-    private fun notifyFailed() {
-        currentState = State.Failed
-        downloadStateFlow.value = State.Failed
+    private suspend fun notifyFailed() {
+        currentState = stateHolder.failed.apply { progress = getProgress() }
+        downloadStateFlow.value = currentState
         "url ${param.url} download task failed.".log()
     }
 
-    private fun notifySucceed() {
-        currentState = State.Succeed
-        downloadStateFlow.value = State.Succeed
+    private suspend fun notifySucceed() {
+        currentState = stateHolder.succeed.apply { progress = getProgress() }
+        downloadStateFlow.value = currentState
         "url ${param.url} download task complete.".log()
     }
 
     private fun Progress.isComplete(): Boolean {
         return totalSize > 0 && totalSize == downloadSize
+    }
+
+    class StateHolder {
+        val none by lazy { State.None() }
+        val waiting by lazy { State.Waiting() }
+        val downloading by lazy { State.Downloading() }
+        val stopped by lazy { State.Stopped() }
+        val failed by lazy { State.Failed() }
+        val succeed by lazy { State.Succeed() }
     }
 }

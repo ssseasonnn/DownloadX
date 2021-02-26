@@ -7,9 +7,9 @@ import coil.load
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import okhttp3.OkHttpClient
 import zlc.season.bracer.start
 import zlc.season.downloadx.download
 import zlc.season.downloadxdemo.databinding.ActivityMainBinding
@@ -17,6 +17,9 @@ import zlc.season.downloadxdemo.databinding.AppInfoItemBinding
 import zlc.season.yasha.YashaDataSource
 import zlc.season.yasha.YashaItem
 import zlc.season.yasha.linear
+import java.util.logging.Level
+import java.util.logging.Logger
+
 
 class MainActivity : AppCompatActivity() {
     private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
@@ -27,6 +30,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+
+        Logger.getLogger(OkHttpClient::class.java.name).setLevel(Level.FINE)
 
         dataSource.retry.onEach {
             binding.btnRetry.visibility = if (it) View.VISIBLE else View.GONE
@@ -46,10 +51,9 @@ class MainActivity : AppCompatActivity() {
 
                     data.downloadTask?.let {
                         data.progressJob?.cancel()
-                        data.progressJob = it.state().combine(it.progress()) { l, r -> Pair(l, r) }
+                        data.progressJob = it.state()
                             .onEach {
-                                itemBinding.button.setState(it.first)
-                                itemBinding.button.setProgress(it.second)
+                                itemBinding.button.setState(it)
                             }
                             .launchIn(coroutineScope)
                     }

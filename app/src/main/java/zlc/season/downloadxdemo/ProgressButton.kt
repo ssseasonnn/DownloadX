@@ -31,7 +31,7 @@ class ProgressButton @JvmOverloads constructor(
                 binding.button.text = "重试"
             }
             is State.Stopped -> {
-                binding.button.text = "下载"
+                binding.button.text = "继续"
             }
             is State.Succeed -> {
                 binding.button.text = "安装"

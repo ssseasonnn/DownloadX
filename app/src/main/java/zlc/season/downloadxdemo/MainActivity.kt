@@ -69,7 +69,13 @@ class MainActivity : AppCompatActivity() {
                         }.start(this@MainActivity)
                     }
                     itemBinding.button.setOnClickListener {
-                        data.downloadTask?.start()
+                        data.downloadTask?.let {
+                            if (it.isStarted()) {
+                                it.stop()
+                            } else {
+                                it.start()
+                            }
+                        }
                     }
                 }
 

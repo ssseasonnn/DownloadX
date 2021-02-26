@@ -17,6 +17,7 @@ open class DownloadTask(
     val config: DownloadConfig
 ) {
     private val stateHolder by lazy { StateHolder() }
+
     private var downloadJob: Job? = null
     private var downloader: Downloader? = null
 
@@ -65,7 +66,9 @@ open class DownloadTask(
                     param.savePath = Default.DEFAULT_SAVE_PATH
                 }
 
-                downloader = config.dispatcher.dispatch(this@DownloadTask, response)
+                if (downloader == null) {
+                    downloader = config.dispatcher.dispatch(this@DownloadTask, response)
+                }
 
                 notifyStarted()
 
@@ -118,9 +121,7 @@ open class DownloadTask(
     }
 
     suspend fun getProgress(): Progress {
-        val progress = downloader?.queryProgress() ?: Progress()
-        println(progress.percent())
-        return progress
+        return downloader?.queryProgress() ?: Progress()
     }
 
     fun getState() = currentState
@@ -158,6 +159,10 @@ open class DownloadTask(
 
     private fun Progress.isComplete(): Boolean {
         return totalSize > 0 && totalSize == downloadSize
+    }
+
+    private fun State.isEnd(): Boolean {
+        return this is State.Stopped || this is State.Failed || this is State.Succeed
     }
 
     class StateHolder {

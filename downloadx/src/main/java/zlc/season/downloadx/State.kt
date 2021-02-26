@@ -10,8 +10,4 @@ sealed class State() {
     class Stopped : State()
     class Failed : State()
     class Succeed : State()
-
-    fun isEnd(): Boolean {
-        return this is Stopped || this is Failed || this is Succeed
-    }
 }

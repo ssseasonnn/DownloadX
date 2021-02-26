@@ -1,9 +1,6 @@
 package zlc.season.downloadx.core
 
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import okhttp3.ResponseBody
@@ -33,12 +30,14 @@ abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Do
 
     private val progress = Progress()
 
-    override var actor = GlobalScope.actor<QueryProgress> {
+    override var actor = GlobalScope.actor<QueryProgress>(Dispatchers.IO) {
         for (each in channel) {
+            println("receive query msg")
             each.completableDeferred.complete(progress.also {
                 it.downloadSize = downloadSize
                 it.totalSize = totalSize
                 it.isChunked = isChunked
+                println("progress: $downloadSize,$totalSize")
             })
         }
     }

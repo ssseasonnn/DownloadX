@@ -35,7 +35,8 @@ open class DownloadTask(
 
     fun start() {
         coroutineScope.launch {
-            if (isStarted()) return@launch
+            if (downloadJob?.isActive == true) return@launch
+
             notifyWaiting()
             try {
                 config.queue.enqueue(this@DownloadTask)
@@ -86,7 +87,7 @@ open class DownloadTask(
 
     fun stop() {
         coroutineScope.launch {
-            if (currentState.isEnd()) return@launch
+            if (downloadJob?.isActive == false) return@launch
             downloadJob?.cancel()
             notifyStopped()
         }

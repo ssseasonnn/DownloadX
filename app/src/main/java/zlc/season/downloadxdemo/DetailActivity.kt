@@ -5,9 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import zlc.season.bracer.mutableParams
 import zlc.season.bracer.params
 import zlc.season.downloadx.State

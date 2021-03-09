@@ -3,6 +3,7 @@ package zlc.season.downloadxdemo
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import coil.load
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
@@ -25,17 +26,19 @@ class MainActivity : AppCompatActivity() {
     private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     private val dataSource by lazy { AppListDataSource() }
 
-    private val coroutineScope = MainScope()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
         Logger.getLogger(OkHttpClient::class.java.name).setLevel(Level.FINE)
 
+        dataSource.loading.onEach {
+            binding.progress.visibility = if (it) View.VISIBLE else View.GONE
+        }.launchIn(lifecycleScope)
+
         dataSource.retry.onEach {
             binding.btnRetry.visibility = if (it) View.VISIBLE else View.GONE
-        }.launchIn(coroutineScope)
+        }.launchIn(lifecycleScope)
 
         binding.btnRetry.setOnClickListener {
             dataSource.invalidate()
@@ -55,7 +58,7 @@ class MainActivity : AppCompatActivity() {
                             .onEach {
                                 itemBinding.button.setState(it)
                             }
-                            .launchIn(coroutineScope)
+                            .launchIn(lifecycleScope)
                     }
                 }
                 onBind {
@@ -88,15 +91,19 @@ class MainActivity : AppCompatActivity() {
 
     class AppListDataSource : YashaDataSource() {
         val retry = MutableStateFlow(false)
+        val loading = MutableStateFlow(false)
 
         override suspend fun loadInitial(): List<YashaItem> {
             return try {
+                loading.value = true
                 retry.value = false
                 AppInfoManager.getAppInfoList()
             } catch (e: Exception) {
                 e.printStackTrace()
                 retry.value = true
                 emptyList()
+            } finally {
+                loading.value = false
             }
         }
     }

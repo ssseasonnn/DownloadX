@@ -24,19 +24,22 @@ open class DownloadTask(
     private val downloadProgressFlow = MutableStateFlow(0)
     private val downloadStateFlow = MutableStateFlow<State>(stateHolder.none)
 
-    private var currentState: State = stateHolder.none
-
     fun isStarted(): Boolean {
-        return currentState is State.Waiting || currentState is State.Downloading
+        return stateHolder.isStarted()
     }
 
     fun canStart(): Boolean {
-        return currentState is State.None || currentState is State.Failed || currentState is State.Stopped
+        return stateHolder.canStart()
     }
 
+    private fun checkJob() = downloadJob?.isActive == true
+
+    /**
+     * 开始下载
+     */
     fun start() {
         coroutineScope.launch {
-            if (downloadJob?.isActive == true) return@launch
+            if (checkJob()) return@launch
 
             notifyWaiting()
             try {
@@ -48,8 +51,11 @@ open class DownloadTask(
         }
     }
 
+    /**
+     * 开始下载并等待下载完成
+     */
     suspend fun suspendStart() {
-        if (downloadJob?.isActive == true) return
+        if (checkJob()) return
 
         downloadJob?.cancel()
         downloadJob = coroutineScope.launch(Dispatchers.IO) {
@@ -88,25 +94,40 @@ open class DownloadTask(
         downloadJob?.join()
     }
 
+    /**
+     * 停止下载
+     */
     fun stop() {
         coroutineScope.launch {
-            if (downloadJob?.isActive == false) return@launch
+            if (!checkJob()) return@launch
             downloadJob?.cancel()
             notifyStopped()
         }
     }
 
-    fun progress(interval: Long = 200, ensureLast: Boolean = false): Flow<Progress> {
+    /**
+     * @param interval 更新进度间隔时间，单位ms
+     * @param ensureLast 能否收到最后一个进度
+     */
+    fun progress(interval: Long = 200, ensureLast: Boolean = true): Flow<Progress> {
         return downloadProgressFlow.flatMapConcat {
             if (it == 0) return@flatMapConcat emptyFlow()
 
+            // make sure send once
+            var hasSend = false
             channelFlow {
                 while (currentCoroutineContext().isActive) {
                     val progress = getProgress()
-                    if (!ensureLast && currentState.isEnd()) break
+
+                    if (hasSend && stateHolder.isEnd()) {
+                        if (!ensureLast) {
+                            break
+                        }
+                    }
 
                     send(progress)
                     "url ${param.url} progress ${progress.percentStr()}".log()
+                    hasSend = true
 
                     if (progress.isComplete()) break
 
@@ -116,53 +137,52 @@ open class DownloadTask(
         }
     }
 
-    fun state(): Flow<State> {
-        return downloadStateFlow.combine(progress()) { l, r -> l.apply { progress = r } }
+    /**
+     * @param interval 更新进度间隔时间，单位ms
+     */
+    fun state(interval: Long = 200): Flow<State> {
+        return downloadStateFlow.combine(progress(interval, ensureLast = false)) { l, r -> l.apply { progress = r } }
     }
 
     suspend fun getProgress(): Progress {
         return downloader?.queryProgress() ?: Progress()
     }
 
-    fun getState() = currentState
+    fun getState() = stateHolder.currentState
 
     private suspend fun notifyWaiting() {
-        currentState = stateHolder.waiting.apply { progress = getProgress() }
-        downloadStateFlow.value = currentState
+        stateHolder.updateState(stateHolder.waiting, getProgress())
+        downloadStateFlow.value = stateHolder.currentState
         "url ${param.url} download task waiting.".log()
     }
 
     private suspend fun notifyStarted() {
-        currentState = stateHolder.downloading.apply { progress = getProgress() }
-        downloadStateFlow.value = currentState
+        stateHolder.updateState(stateHolder.downloading, getProgress())
+        downloadStateFlow.value = stateHolder.currentState
         downloadProgressFlow.value = downloadProgressFlow.value + 1
         "url ${param.url} download task start.".log()
     }
 
     private suspend fun notifyStopped() {
-        currentState = stateHolder.stopped.apply { progress = getProgress() }
-        downloadStateFlow.value = currentState
-        "url ${param.url} download task stop.".log()
+        stateHolder.updateState(stateHolder.stopped, getProgress())
+        downloadStateFlow.value = stateHolder.currentState
+        "url ${param.url} download task stopped.".log()
     }
 
     private suspend fun notifyFailed() {
-        currentState = stateHolder.failed.apply { progress = getProgress() }
-        downloadStateFlow.value = currentState
+        stateHolder.updateState(stateHolder.failed, getProgress())
+        downloadStateFlow.value = stateHolder.currentState
         "url ${param.url} download task failed.".log()
     }
 
     private suspend fun notifySucceed() {
-        currentState = stateHolder.succeed.apply { progress = getProgress() }
-        downloadStateFlow.value = currentState
-        "url ${param.url} download task complete.".log()
+        stateHolder.updateState(stateHolder.succeed, getProgress())
+        downloadStateFlow.value = stateHolder.currentState
+        "url ${param.url} download task succeed.".log()
     }
 
     private fun Progress.isComplete(): Boolean {
         return totalSize > 0 && totalSize == downloadSize
-    }
-
-    private fun State.isEnd(): Boolean {
-        return this is State.Stopped || this is State.Failed || this is State.Succeed
     }
 
     class StateHolder {
@@ -172,5 +192,24 @@ open class DownloadTask(
         val stopped by lazy { State.Stopped() }
         val failed by lazy { State.Failed() }
         val succeed by lazy { State.Succeed() }
+
+        var currentState: State = none
+
+        fun isStarted(): Boolean {
+            return currentState is State.Waiting || currentState is State.Downloading
+        }
+
+        fun canStart(): Boolean {
+            return currentState is State.None || currentState is State.Failed || currentState is State.Stopped
+        }
+
+        fun isEnd(): Boolean {
+            return currentState is State.Stopped || currentState is State.Failed || currentState is State.Succeed
+        }
+
+        fun updateState(new: State, progress: Progress): State {
+            currentState = new.apply { this.progress = progress }
+            return currentState
+        }
     }
 }

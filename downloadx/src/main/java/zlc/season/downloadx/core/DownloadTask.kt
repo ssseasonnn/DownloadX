@@ -111,8 +111,6 @@ open class DownloadTask(
      */
     fun progress(interval: Long = 200, ensureLast: Boolean = true): Flow<Progress> {
         return downloadProgressFlow.flatMapConcat {
-            if (it == 0) return@flatMapConcat emptyFlow()
-
             // make sure send once
             var hasSend = false
             channelFlow {
@@ -204,7 +202,7 @@ open class DownloadTask(
         }
 
         fun isEnd(): Boolean {
-            return currentState is State.Stopped || currentState is State.Failed || currentState is State.Succeed
+            return currentState is State.None || currentState is State.Waiting || currentState is State.Stopped || currentState is State.Failed || currentState is State.Succeed
         }
 
         fun updateState(new: State, progress: Progress): State {

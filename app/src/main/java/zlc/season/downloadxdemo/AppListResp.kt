@@ -58,8 +58,6 @@ data class AppListResp(
     ) : YashaItem {
 
         @Transient
-        var downloadTask: DownloadTask? = null
-        @Transient
         var progressJob: Job? = null
     }
 }

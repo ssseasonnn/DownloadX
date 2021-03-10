@@ -104,12 +104,14 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
 
         val rangeChannel = coroutineScope.actor<Range> {
             repeat(config.rangeCurrency) {
-                val deferred = async(Dispatchers.IO) {
-                    channel.consumeEach {
-                        it.download(param, config, progressChannel)
+                launch(Dispatchers.IO) {
+                    val deferred = async(Dispatchers.IO) {
+                        channel.consumeEach {
+                            it.download(param, config, progressChannel)
+                        }
                     }
+                    deferred.await()
                 }
-                deferred.await()
             }
 
             progressChannel.close()
@@ -126,7 +128,6 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
         }
     }
 
-
     private suspend fun Range.download(
         param: DownloadParam,
         config: DownloadConfig,
@@ -135,6 +136,8 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
         val deferred = async(Dispatchers.IO) {
             val url = param.url
             val rangeHeader = mapOf("Range" to "bytes=${current}-${end}")
+
+            rangeHeader.log()
 
             val response = request(url, rangeHeader)
             if (!response.isSuccessful || response.body() == null) {

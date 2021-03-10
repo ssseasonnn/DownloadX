@@ -6,10 +6,6 @@ import zlc.season.downloadx.core.DownloadTask
 import zlc.season.downloadx.core.DownloadParam
 import zlc.season.downloadx.core.DownloadConfig
 
-fun CoroutineScope.download(url: String): DownloadTask {
-    return download(url,"")
-}
-
 fun CoroutineScope.download(
     url: String,
     saveName: String = "",
@@ -20,6 +16,8 @@ fun CoroutineScope.download(
     return if (downloadConfig.queue.contain(downloadParams.tag())) {
         downloadConfig.queue.get(downloadParams.tag())
     } else {
-        DownloadTask(this, downloadParams, downloadConfig)
+        val task = DownloadTask(this, downloadParams, downloadConfig)
+        downloadConfig.queue.add(task)
+        task
     }
 }

@@ -47,19 +47,14 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerView.linear(dataSource) {
             renderBindingItem<AppListResp.AppInfo, AppInfoItemBinding> {
                 onAttach {
-                    if (data.downloadTask == null) {
-                        val downloadTask = GlobalScope.download(data.apkUrl)
-                        data.downloadTask = downloadTask
-                    }
+                    val downloadTask = GlobalScope.download(data.apkUrl)
 
-                    data.downloadTask?.let {
-                        data.progressJob?.cancel()
-                        data.progressJob = it.state()
-                            .onEach {
-                                itemBinding.button.setState(it)
-                            }
-                            .launchIn(lifecycleScope)
-                    }
+                    data.progressJob?.cancel()
+                    data.progressJob = downloadTask.state()
+                        .onEach {
+                            itemBinding.button.setState(it)
+                        }
+                        .launchIn(lifecycleScope)
                 }
                 onBind {
                     itemBinding.title.text = data.appName
@@ -72,12 +67,11 @@ class MainActivity : AppCompatActivity() {
                         }.start(this@MainActivity)
                     }
                     itemBinding.button.setOnClickListener {
-                        data.downloadTask?.let {
-                            if (it.isStarted()) {
-                                it.stop()
-                            } else {
-                                it.start()
-                            }
+                        val downloadTask = GlobalScope.download(data.apkUrl)
+                        if (downloadTask.isStarted()) {
+                            downloadTask.stop()
+                        } else {
+                            downloadTask.start()
                         }
                     }
                 }

@@ -31,10 +31,16 @@ class DetailActivity : AppCompatActivity() {
             .launchIn(lifecycleScope)
 
         binding.button.setOnClickListener {
-            if (downloadTask.isStarted()) {
-                downloadTask.stop()
-            } else {
-                downloadTask.start()
+            when {
+                downloadTask.isSucceed() -> {
+                    installApk(downloadTask.file()!!)
+                }
+                downloadTask.isStarted() -> {
+                    downloadTask.stop()
+                }
+                else -> {
+                    downloadTask.start()
+                }
             }
         }
     }

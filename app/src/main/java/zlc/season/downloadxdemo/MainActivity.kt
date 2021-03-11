@@ -62,10 +62,16 @@ class MainActivity : AppCompatActivity() {
                     }
                     itemBinding.button.setOnClickListener {
                         val downloadTask = GlobalScope.download(data.apkUrl)
-                        if (downloadTask.isStarted()) {
-                            downloadTask.stop()
-                        } else {
-                            downloadTask.start()
+                        when {
+                            downloadTask.isSucceed() -> {
+                                installApk(downloadTask.file()!!)
+                            }
+                            downloadTask.isStarted() -> {
+                                downloadTask.stop()
+                            }
+                            else -> {
+                                downloadTask.start()
+                            }
                         }
                     }
                 }

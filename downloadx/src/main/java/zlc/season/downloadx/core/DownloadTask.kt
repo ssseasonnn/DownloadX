@@ -9,6 +9,7 @@ import zlc.season.downloadx.helper.request
 import zlc.season.downloadx.utils.closeQuietly
 import zlc.season.downloadx.utils.fileName
 import zlc.season.downloadx.utils.log
+import java.io.File
 
 @OptIn(ObsoleteCoroutinesApi::class, FlowPreview::class, ExperimentalCoroutinesApi::class)
 open class DownloadTask(
@@ -28,11 +29,30 @@ open class DownloadTask(
         return stateHolder.isStarted()
     }
 
+    fun isFailed(): Boolean {
+        return stateHolder.isFailed()
+    }
+
+    fun isSucceed(): Boolean {
+        return stateHolder.isSucceed()
+    }
+
     fun canStart(): Boolean {
         return stateHolder.canStart()
     }
 
     private fun checkJob() = downloadJob?.isActive == true
+
+    /**
+     * 获取下载文件
+     */
+    fun file(): File? {
+        return if (param.saveName.isNotEmpty() && param.savePath.isNotEmpty()) {
+            File(param.savePath, param.saveName)
+        } else {
+            null
+        }
+    }
 
     /**
      * 开始下载
@@ -195,6 +215,14 @@ open class DownloadTask(
 
         fun isStarted(): Boolean {
             return currentState is State.Waiting || currentState is State.Downloading
+        }
+
+        fun isFailed(): Boolean {
+            return currentState is State.Failed
+        }
+
+        fun isSucceed(): Boolean {
+            return currentState is State.Succeed
         }
 
         fun canStart(): Boolean {

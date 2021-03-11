@@ -1,6 +1,10 @@
 package zlc.season.downloadx.utils
 
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.consumeEach
 import java.math.BigDecimal
+import java.util.concurrent.atomic.AtomicInteger
 
 fun String.toLongOrDefault(defaultValue: Long): Long {
     return try {
@@ -41,4 +45,42 @@ infix fun Long.ratio(bottom: Long): Double {
     val result = (this * 100.0).toBigDecimal()
         .divide((bottom * 1.0).toBigDecimal(), 2, BigDecimal.ROUND_FLOOR)
     return result.toDouble()
+}
+
+suspend fun <T, R> (Collection<T>).parallel(
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    max: Int = 2,
+    action: suspend CoroutineScope.(T) -> R
+): Iterable<R> = coroutineScope {
+    val list = this@parallel
+    if (list.isEmpty()) return@coroutineScope listOf<R>()
+
+    val channel = Channel<T>()
+    val output = Channel<R>()
+
+    val counter = AtomicInteger(0)
+
+    launch {
+        list.forEach { channel.send(it) }
+        channel.close()
+    }
+
+    repeat(max) {
+        launch(dispatcher) {
+            channel.consumeEach {
+                output.send(action(it))
+                val completed = counter.incrementAndGet()
+                if (completed == list.size) {
+                    output.close()
+                }
+            }
+        }
+    }
+
+    val results = mutableListOf<R>()
+    for (item in output) {
+        results.add(item)
+    }
+
+    return@coroutineScope results
 }

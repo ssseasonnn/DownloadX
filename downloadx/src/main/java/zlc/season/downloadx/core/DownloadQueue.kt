@@ -37,13 +37,10 @@ class DefaultDownloadQueue private constructor(private val maxTask: Int) : Downl
     private val taskMap = ConcurrentHashMap<String, DownloadTask>()
 
     init {
-        GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch {
             repeat(maxTask) {
-                launch(Dispatchers.IO) {
-                    val deferred = async(Dispatchers.IO) {
-                        channel.consumeEach { it.suspendStart() }
-                    }
-                    deferred.await()
+                launch {
+                    channel.consumeEach { it.suspendStart() }
                 }
             }
         }

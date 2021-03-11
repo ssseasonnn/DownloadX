@@ -16,12 +16,12 @@ object Default {
     /**
      * 单个任务同时下载的分片数量
      */
-    const val DEFAULT_RANGE_CURRENCY = 3
+    const val DEFAULT_RANGE_CURRENCY = 5
 
     /**
      * 同时下载的任务数量
      */
-    const val MAX_TASK_NUMBER = 5
+    const val MAX_TASK_NUMBER = 3
 
     /**
      * 默认的Header

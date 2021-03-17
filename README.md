@@ -44,11 +44,11 @@ downloadTask.start()
 
 ## Create task
 
-- 指定CoroutineScope
+- Specify CoroutineScope
 
-如果下载任务仅限于Activity或Fragment的生命周期内，那么可以直接使用Activity或Fragment的**lifecycleScope**，即可保证在Activity或Fragment销毁的时候自动结束下载任务
+If the download task is limited to the lifecycle of the Activity or Fragment, you can directly use the **lifecycleScope** of the Activity or Fragment to ensure that the download task ends automatically when the Activity or Fragment is destroyed
 
-> lifecycleScope是androidX中的扩展，需要添加以下依赖：
+> lifecycleScope is an extension in androidX, you need to add the following dependencies:
 > implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.2.0'
 
 ```kotlin
@@ -56,30 +56,30 @@ class DemoActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        //activity销毁时，该下载任务自动停止
+        //When the activity is destroyed, the download task automatically stops
         val downloadTask = lifecycleScope.download("url")
         downloadTask.start()
     }
 }
 ```
 
-如果下载任务需要在多个Activity之间共享，或者进行后台下载，那么直接使用**GlobalScope**即可
+If the download task needs to be shared between multiple activities, or download in the background, then directly use **GlobalScope**
 
 ```kotlin
 class DemoActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        //activity销毁时，该下载任务仍然继续下载
+        //When the activity is destroyed, the download task still continues to download
         val downloadTask = GlobalScope.download("url")
         downloadTask.start()
     }
 }
 ```
 
-- 保存文件名和下载地址
+- Set the file name and save path
 
-直接传给download方法:
+Pass directly to the download method:
 
 ```kotlin
 val downloadTask = GlobalScope.download("url", "saveName", "savePath")
@@ -92,12 +92,12 @@ val downloadParam = DownloadParam("url", "saveName", "savePath")
 val downloadTask = lifecycleScope.download(downloadParam)
 ```
 
-默认情况下，我们使用**url**作为**DownloadTask**的唯一标示，当需要改变这一默认行为时，可以自定义自己的**DownloadParam**：
+By default, we use **url** as the only indicator of **DownloadTask**. When you need to change this default behavior, you can customize your own **DownloadParam**:
 
 ```kotlin
 class CustomDownloadParam(url: String, saveName: String, savePath: String) : DownloadParam(url, saveName, savePath) {
     override fun tag(): String {
-        // 使用文件路径作为唯一标示
+        // Use the file path as a unique identifier
         return savePath + saveName
     }
 }
@@ -106,21 +106,21 @@ val customDownloadParam = CustomDownloadParam("url", "saveName", "savePath")
 val downloadTask = lifecycleScope.download(customDownloadParam)
 ```
 
-在多个页面使用同样的标识（例如相同的url）创建下载任务时，将会返回同一个DownloadTask，例如：
+When multiple pages use the same identifier (for example, the same url) to create a download task, the same DownloadTask will be returned, for example:
 
 ```kotlin
-// 同一个url
+// same url
 val url = "xxxx"
 
 class DemoActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        //创建下载任务
+        //Create download task
         val downloadTask = GlobalScope.download(url)
 
         downloadTask.progress()
-            .onEach { progress ->  /* 更新进度 */ }
+            .onEach { progress ->  /* update progress */ }
             .launchIn(lifecycleScope)
 
         downloadTask.start()
@@ -131,11 +131,11 @@ class OtherActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        //以相同的url创建下载任务，即可获取上一个页面创建的下载任务
+        //Create a download task with the same url to get the download task created on the previous page
         val downloadTask = GlobalScope.download(url)
 
         downloadTask.progress()
-            .onEach { progress ->  /* 更新进度 */ }
+            .onEach { progress ->  /* update progress */ }
             .launchIn(lifecycleScope)
 
         downloadTask.start()
@@ -143,13 +143,13 @@ class OtherActivity : AppCompatActivity() {
 }
 ```
 
-基于此，可以在任意多个页面中共享同一个下载进度和下载状态
+Based on this, the same download progress and download status can be shared on any number of pages
 
 ## Progress and State
 
 - Listen progress only
 
-在某些场景只需要下载的进度时，可使用这种方式
+This method can be used in certain scenarios when only the download progress is needed
 
 ```kotlin
 val downloadTask = lifecycleScope.download("url")
@@ -161,13 +161,13 @@ downloadTask.progress()
 downloadTask.start()
 ```
 
-> 利用**lifecycleScope**可确保在Activity或Fragment销毁的时候自动解除监听
+> Use **lifecycleScope** to ensure that the monitoring is automatically released when the Activity or Fragment is destroyed
 
 
-可以为progress()方法设置更新间隔，默认是200ms更新一次，如：
+You can set the update interval for the progress() method. The default is to update every 200ms, such as:
 
 ```kotlin
-downloadTask.progress(500) // 设置为500ms更新一次进度
+downloadTask.progress(500) // Set to update the progress every 500ms
     .onEach { progress ->  
         // update progress
         setProgress(progress)
@@ -177,7 +177,7 @@ downloadTask.progress(500) // 设置为500ms更新一次进度
 
 - Listen progress and state
 
-当需要下载状态和下载进度的时候，使用这种方式获取
+When you need download status and download progress, use this method to get
 
 ```kotlin
 val downloadTask = lifecycleScope.download("url")
@@ -194,9 +194,9 @@ downloadTask.state()
 downloadTask.start()
 ```
 
-> state有以下值：**None,Waiting,Downloading,Stopped,Failed,Succeed**
+> state has the following values：**None,Waiting,Downloading,Stopped,Failed,Succeed**
 
-同样的，可以为state()方法设置进度更新间隔
+Similarly, you can set the progress update interval for the state() method
 
 
 ## Start and Stop

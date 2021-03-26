@@ -19,7 +19,7 @@ maven { url 'https://jitpack.io' }
 - 添加依赖:
 
 ```gradle
-implementation "com.github.ssseasonnn:DownloadX:1.0.0"
+implementation "com.github.ssseasonnn:DownloadX:1.0.1"
 ```
 
 ## Basic Usage
@@ -215,6 +215,12 @@ downloadTask.start()
 
 ```kotlin
 downloadTask.stop()
+```
+
+- 删除下载
+
+```kotlin
+downloadTask.remove()
 ```
 
 ## License

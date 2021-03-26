@@ -13,24 +13,14 @@ fun CoroutineScope.download(
     downloadConfig: DownloadConfig = DownloadConfig()
 ): DownloadTask {
     val downloadParam = DownloadParam(url, saveName, savePath)
-    return if (downloadConfig.queue.contain(downloadParam.tag())) {
-        downloadConfig.queue.get(downloadParam.tag())
-    } else {
-        val task = DownloadTask(this, downloadParam, downloadConfig)
-        downloadConfig.queue.add(task)
-        task
-    }
+    val task = DownloadTask(this, downloadParam, downloadConfig)
+    return downloadConfig.taskManager.add(task)
 }
 
 fun CoroutineScope.download(
     downloadParam: DownloadParam,
     downloadConfig: DownloadConfig = DownloadConfig()
 ): DownloadTask {
-    return if (downloadConfig.queue.contain(downloadParam.tag())) {
-        downloadConfig.queue.get(downloadParam.tag())
-    } else {
-        val task = DownloadTask(this, downloadParam, downloadConfig)
-        downloadConfig.queue.add(task)
-        task
-    }
+    val task = DownloadTask(this, downloadParam, downloadConfig)
+    return downloadConfig.taskManager.add(task)
 }

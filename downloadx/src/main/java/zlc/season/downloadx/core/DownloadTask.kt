@@ -6,6 +6,7 @@ import zlc.season.downloadx.Progress
 import zlc.season.downloadx.State
 import zlc.season.downloadx.helper.Default
 import zlc.season.downloadx.helper.request
+import zlc.season.downloadx.utils.clear
 import zlc.season.downloadx.utils.closeQuietly
 import zlc.season.downloadx.utils.fileName
 import zlc.season.downloadx.utils.log
@@ -55,7 +56,7 @@ open class DownloadTask(
     }
 
     /**
-     * 开始下载
+     * 开始下载，添加到下载队列
      */
     fun start() {
         coroutineScope.launch {
@@ -65,14 +66,16 @@ open class DownloadTask(
             try {
                 config.queue.enqueue(this@DownloadTask)
             } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    notifyFailed()
+                }
                 e.log()
-                notifyFailed()
             }
         }
     }
 
     /**
-     * 开始下载并等待下载完成
+     * 开始下载并等待下载完成，直接开始下载，不添加到下载队列
      */
     suspend fun suspendStart() {
         if (checkJob()) return
@@ -119,9 +122,22 @@ open class DownloadTask(
      */
     fun stop() {
         coroutineScope.launch {
-            if (!checkJob()) return@launch
-            downloadJob?.cancel()
-            notifyStopped()
+            if (isStarted()) {
+                config.queue.dequeue(this@DownloadTask)
+                downloadJob?.cancel()
+                notifyStopped()
+            }
+        }
+    }
+
+    /**
+     * 移除任务
+     */
+    fun remove(deleteFile: Boolean = true) {
+        stop()
+        config.taskManager.remove(this)
+        if (deleteFile) {
+            file()?.clear()
         }
     }
 

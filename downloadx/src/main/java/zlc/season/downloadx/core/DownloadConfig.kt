@@ -6,6 +6,10 @@ import zlc.season.downloadx.helper.Default.RANGE_CHECK_HEADER
 
 class DownloadConfig(
     /**
+     * 下载管理
+     */
+    val taskManager: TaskManager = DefaultTaskManager,
+    /**
      * 下载队列
      */
     val queue: DownloadQueue = DefaultDownloadQueue.get(),

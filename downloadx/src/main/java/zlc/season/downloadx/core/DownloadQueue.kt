@@ -9,11 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 interface DownloadQueue {
     suspend fun enqueue(task: DownloadTask)
 
-    fun contain(tag: String): Boolean
-
-    fun get(tag: String): DownloadTask
-
-    fun add(task: DownloadTask)
+    suspend fun dequeue(task: DownloadTask)
 }
 
 class DefaultDownloadQueue private constructor(private val maxTask: Int) : DownloadQueue {
@@ -34,33 +30,33 @@ class DefaultDownloadQueue private constructor(private val maxTask: Int) : Downl
     }
 
     private val channel = Channel<DownloadTask>()
-    private val taskMap = ConcurrentHashMap<String, DownloadTask>()
+    private val tempMap = ConcurrentHashMap<String, DownloadTask>()
 
     init {
         GlobalScope.launch {
             repeat(maxTask) {
                 launch {
-                    channel.consumeEach { it.suspendStart() }
+                    channel.consumeEach {
+                        if (contain(it)) {
+                            it.suspendStart()
+                            dequeue(it)
+                        }
+                    }
                 }
             }
         }
     }
 
     override suspend fun enqueue(task: DownloadTask) {
+        tempMap[task.param.tag()] = task
         channel.send(task)
     }
 
-    override fun contain(tag: String): Boolean {
-        return taskMap[tag] != null
+    override suspend fun dequeue(task: DownloadTask) {
+        tempMap.remove(task.param.tag())
     }
 
-    override fun get(tag: String): DownloadTask {
-        return taskMap[tag]!!
-    }
-
-    override fun add(task: DownloadTask) {
-        if (!contain(task.param.tag())) {
-            taskMap[task.param.tag()] = task
-        }
+    private fun contain(task: DownloadTask): Boolean {
+        return tempMap[task.param.tag()] != null
     }
 }

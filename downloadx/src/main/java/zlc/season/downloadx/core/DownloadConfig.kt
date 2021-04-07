@@ -1,8 +1,10 @@
 package zlc.season.downloadx.core
 
+import okhttp3.ResponseBody
+import retrofit2.Response
 import zlc.season.downloadx.helper.Default.DEFAULT_RANGE_CURRENCY
 import zlc.season.downloadx.helper.Default.DEFAULT_RANGE_SIZE
-import zlc.season.downloadx.helper.Default.RANGE_CHECK_HEADER
+import zlc.season.downloadx.helper.apiCreator
 
 class DownloadConfig(
     /**
@@ -17,7 +19,7 @@ class DownloadConfig(
     /**
      * 自定义header
      */
-    customHeader: Map<String, String> = emptyMap(),
+    val customHeader: Map<String, String> = emptyMap(),
 
     /**
      * 分片下载每片的大小
@@ -37,10 +39,19 @@ class DownloadConfig(
      * 文件校验
      */
     val validator: FileValidator = DefaultFileValidator,
-) {
 
-    val header = mutableMapOf<String, String>().also {
-        it.putAll(RANGE_CHECK_HEADER)
-        it.putAll(customHeader)
+    /**
+     * http client
+     */
+    httpClientFactory: HttpClientFactory = DefaultHttpClientFactory
+) {
+    private val api = apiCreator(httpClientFactory.create())
+
+    suspend fun request(url: String, header: Map<String, String>): Response<ResponseBody> {
+        val tempHeader = mutableMapOf<String, String>().also {
+            it.putAll(customHeader)
+            it.putAll(header)
+        }
+        return api.get(url, tempHeader)
     }
 }

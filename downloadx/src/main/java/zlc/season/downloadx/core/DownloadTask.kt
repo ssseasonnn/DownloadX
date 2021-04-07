@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.*
 import zlc.season.downloadx.Progress
 import zlc.season.downloadx.State
 import zlc.season.downloadx.helper.Default
-import zlc.season.downloadx.helper.request
 import zlc.season.downloadx.utils.clear
 import zlc.season.downloadx.utils.closeQuietly
 import zlc.season.downloadx.utils.fileName
@@ -81,8 +80,16 @@ open class DownloadTask(
         if (checkJob()) return
 
         downloadJob?.cancel()
-        downloadJob = coroutineScope.launch(Dispatchers.IO) {
-            val response = request(param.url, config.header)
+        val errorHandler = CoroutineExceptionHandler { _, throwable ->
+            throwable.log()
+            if (throwable !is CancellationException) {
+                coroutineScope.launch {
+                    notifyFailed()
+                }
+            }
+        }
+        downloadJob = coroutineScope.launch(errorHandler + Dispatchers.IO) {
+            val response = config.request(param.url, Default.RANGE_CHECK_HEADER)
             try {
                 if (!response.isSuccessful || response.body() == null) {
                     throw RuntimeException("request failed")

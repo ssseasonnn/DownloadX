@@ -7,7 +7,6 @@ import kotlinx.coroutines.channels.consumeEach
 import okhttp3.ResponseBody
 import retrofit2.Response
 import zlc.season.downloadx.core.Range.Companion.RANGE_SIZE
-import zlc.season.downloadx.helper.request
 import zlc.season.downloadx.utils.*
 import java.io.File
 
@@ -115,7 +114,7 @@ class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutine
             val url = param.url
             val rangeHeader = mapOf("Range" to "bytes=${current}-${end}")
 
-            val response = request(url, rangeHeader)
+            val response = config.request(url, rangeHeader)
             if (!response.isSuccessful || response.body() == null) {
                 throw RuntimeException("Request failed!")
             }

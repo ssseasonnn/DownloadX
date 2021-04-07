@@ -9,31 +9,19 @@ import retrofit2.http.GET
 import retrofit2.http.HeaderMap
 import retrofit2.http.Streaming
 import retrofit2.http.Url
-import java.util.concurrent.TimeUnit
 
-const val FAKE_BASE_URL = "http://www.example.com"
+internal const val FAKE_BASE_URL = "http://www.example.com"
 
-val okHttpClient: OkHttpClient by lazy {
-    OkHttpClient().newBuilder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
-        .build()
-}
-
-inline fun <reified T> apiCreator(
-    baseUrl: String = FAKE_BASE_URL,
-    client: OkHttpClient = okHttpClient
-): T {
+internal fun apiCreator(client: OkHttpClient): Api {
     val retrofit = Retrofit.Builder()
-        .baseUrl(baseUrl)
+        .baseUrl(FAKE_BASE_URL)
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
-    return retrofit.create(T::class.java)
+    return retrofit.create(Api::class.java)
 }
 
-interface Api {
+internal interface Api {
 
     @GET
     @Streaming
@@ -41,11 +29,4 @@ interface Api {
         @Url url: String,
         @HeaderMap headers: Map<String, String>
     ): Response<ResponseBody>
-}
-
-
-private val api = apiCreator<Api>()
-
-suspend fun request(url: String, headers: Map<String, String>): Response<ResponseBody> {
-    return api.get(url, headers)
 }

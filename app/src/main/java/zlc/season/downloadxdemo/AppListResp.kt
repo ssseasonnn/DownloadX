@@ -3,11 +3,10 @@ package zlc.season.downloadxdemo
 
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Job
-import zlc.season.downloadx.core.DownloadTask
 import zlc.season.yasha.YashaItem
 
 data class AppListResp(
-    @SerializedName("obj")
+    @SerializedName("appList")
     val appList: List<AppInfo> = listOf(),
 ) {
     data class AppInfo(

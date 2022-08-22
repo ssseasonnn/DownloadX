@@ -6,7 +6,7 @@ object Default {
     /**
      * 默认的保存路径
      */
-    val DEFAULT_SAVE_PATH = ClarityPotion.clarityPotion.filesDir.path
+    val DEFAULT_SAVE_PATH = ClarityPotion.context.filesDir.path
 
     /**
      * 默认的分片大小

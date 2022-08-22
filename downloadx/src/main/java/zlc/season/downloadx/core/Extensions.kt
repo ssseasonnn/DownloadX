@@ -1,6 +1,7 @@
 package zlc.season.downloadx.core
 
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.ResponseBody
 import retrofit2.Response
 import zlc.season.downloadx.utils.contentLength
@@ -15,6 +16,7 @@ interface HttpClientFactory {
 object DefaultHttpClientFactory : HttpClientFactory {
     override fun create(): OkHttpClient {
         return OkHttpClient().newBuilder()
+            .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(120, TimeUnit.SECONDS)
             .writeTimeout(120, TimeUnit.SECONDS)

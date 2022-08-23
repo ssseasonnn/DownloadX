@@ -30,10 +30,10 @@ interface DownloadDispatcher {
 
 object DefaultDownloadDispatcher : DownloadDispatcher {
     override fun dispatch(downloadTask: DownloadTask, resp: Response<ResponseBody>): Downloader {
-        return if (resp.isSupportRange()) {
-            RangeDownloader(downloadTask.coroutineScope)
-        } else {
+        return if (downloadTask.config.disableRangeDownload || !resp.isSupportRange()) {
             NormalDownloader(downloadTask.coroutineScope)
+        } else {
+            RangeDownloader(downloadTask.coroutineScope)
         }
     }
 }

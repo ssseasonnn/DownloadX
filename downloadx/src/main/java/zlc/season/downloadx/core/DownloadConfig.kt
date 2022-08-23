@@ -8,6 +8,10 @@ import zlc.season.downloadx.helper.apiCreator
 
 class DownloadConfig(
     /**
+     * 禁用断点续传
+     */
+    val disableRangeDownload: Boolean = false,
+    /**
      * 下载管理
      */
     val taskManager: TaskManager = DefaultTaskManager,

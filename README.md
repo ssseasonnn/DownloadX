@@ -19,7 +19,7 @@ maven { url 'https://jitpack.io' }
 - Add dependency:
 
 ```gradle
-implementation "com.github.ssseasonnn:DownloadX:1.0.3"
+implementation "com.github.ssseasonnn:DownloadX:1.0.4"
 ```
 
 ## Basic Usage

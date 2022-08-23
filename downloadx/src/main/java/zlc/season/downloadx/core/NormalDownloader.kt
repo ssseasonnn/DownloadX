@@ -77,7 +77,9 @@ class NormalDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutin
             while (isActive && readLen != -1L) {
                 downloadSize += readLen
                 readLen = source.read(buffer, BUFFER_SIZE)
+                sink.flush()
             }
+            sink.flush()
         }
         deferred.await()
 

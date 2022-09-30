@@ -9,7 +9,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import zlc.season.bracer.start
+import zlc.season.bracer.startActivity
 import zlc.season.downloadx.download
 import zlc.season.downloadxdemo.databinding.ActivityMainBinding
 import zlc.season.downloadxdemo.databinding.AppInfoItemBinding
@@ -56,9 +56,9 @@ class MainActivity : AppCompatActivity() {
                     itemBinding.icon.load(data.iconUrl)
 
                     itemBinding.root.setOnClickListener {
-                        DetailActivity().apply {
+                        startActivity<DetailActivity> {
                             appInfo = data
-                        }.start(this@MainActivity)
+                        }
                     }
                     itemBinding.button.setOnClickListener {
                         val downloadTask = GlobalScope.download(data.apkUrl)

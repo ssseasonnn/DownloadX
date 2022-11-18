@@ -4,7 +4,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import zlc.season.downloadx.helper.Default.MAX_TASK_NUMBER
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.*
 
 interface DownloadQueue {
     suspend fun enqueue(task: DownloadTask)
@@ -12,6 +12,7 @@ interface DownloadQueue {
     suspend fun dequeue(task: DownloadTask)
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 class DefaultDownloadQueue private constructor(private val maxTask: Int) : DownloadQueue {
     companion object {
         private val lock = Any()

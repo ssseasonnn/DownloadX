@@ -10,7 +10,7 @@ import zlc.season.downloadx.core.Range.Companion.RANGE_SIZE
 import zlc.season.downloadx.utils.*
 import java.io.File
 
-@OptIn(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+@OptIn(ObsoleteCoroutinesApi::class)
 class RangeDownloader(coroutineScope: CoroutineScope) : BaseDownloader(coroutineScope) {
     private lateinit var file: File
     private lateinit var shadowFile: File

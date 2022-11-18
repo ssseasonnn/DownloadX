@@ -1,7 +1,11 @@
 package zlc.season.downloadx.core
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.android.awaitFrame
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import okhttp3.ResponseBody
@@ -23,7 +27,7 @@ interface Downloader {
     )
 }
 
-@OptIn(ObsoleteCoroutinesApi::class)
+@OptIn(ObsoleteCoroutinesApi::class, DelicateCoroutinesApi::class)
 abstract class BaseDownloader(protected val coroutineScope: CoroutineScope) : Downloader {
     protected var totalSize: Long = 0L
     protected var downloadSize: Long = 0L

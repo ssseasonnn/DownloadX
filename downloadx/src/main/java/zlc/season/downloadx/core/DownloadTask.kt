@@ -11,7 +11,7 @@ import zlc.season.downloadx.utils.fileName
 import zlc.season.downloadx.utils.log
 import java.io.File
 
-@OptIn(ObsoleteCoroutinesApi::class, FlowPreview::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 open class DownloadTask(
     val coroutineScope: CoroutineScope,
     val param: DownloadParam,
@@ -153,7 +153,7 @@ open class DownloadTask(
      * @param ensureLast 能否收到最后一个进度
      */
     fun progress(interval: Long = 200, ensureLast: Boolean = true): Flow<Progress> {
-        return downloadProgressFlow.flatMapConcat {
+        return downloadProgressFlow.flatMapLatest {
             // make sure send once
             var hasSend = false
             channelFlow {

@@ -1,6 +1,6 @@
 package zlc.season.downloadx
 
-sealed class State() {
+sealed class State {
     var progress: Progress = Progress()
         internal set
 
